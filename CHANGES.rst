@@ -3,7 +3,15 @@
 ===============
 
 Unreleased
-============
+==========
+
+- Alectryon now supports extracting and running proof snippets found in Typst documents.  When invoked on a Typst file, Alectryon generates a separate ``.alectryon.json`` file containing recorded goals and outputs, which can then be loaded and rendered by a new ``alectryon`` Typst plugin while compiling the Typst sources. [0a78737f, 2e401a09, 99107d7e, 7525b57b]
+
+- Alectryon now supports literate programming in Typst: Typst documents mixing proofs and prose can now be converted back and forth between Typst and Rocq, Lean, or Dafny code files, and edited in Emacs with ``alectryon-mode``. [fc10efc9, 6095200c]
+
+- Output annotations (``.unfold``, ``.no-in``, etc.) can be applied to a whole code block in HTML, LaTeX, and Typst by placing an annotation comment alone on the first line of the block. [2e401a09]
+
+- Generated JSON files (caches and Typst data files) are now pretty-printed only up to a bounded depth. [5382be69]
 
 - A new `--body-only` CLI flag restricts the output to the body of the generated document (no <html> nor <head> for HTML, no preamble nor \begin{document} for LaTeX), allowing outputs to be embedded in other documents. [58d697fc]
 
