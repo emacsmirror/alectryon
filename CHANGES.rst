@@ -5,7 +5,7 @@
 Unreleased
 ==========
 
-- Alectryon now supports extracting and running proof snippets found in Typst documents.  When invoked on a Typst file, Alectryon generates a separate ``.alectryon.json`` file containing recorded goals and outputs, which can then be loaded and rendered by a new ``alectryon`` Typst plugin while compiling the Typst sources. [0a78737f, 2e401a09, 99107d7e, 7525b57b]
+- Alectryon now supports extracting and running proof snippets found in Typst documents.  When invoked on a Typst file containing ``{coq}`` raw blocks, Alectryon generates a separate ``.alectryon.json`` file containing recorded goals and outputs, which can then be loaded and rendered by a new ``alectryon`` Typst plugin while compiling the Typst sources. [0a78737f, 2e401a09, 99107d7e, 7525b57b]
 
 - Alectryon now supports literate programming in Typst: Typst documents mixing proofs and prose can now be converted back and forth between Typst and Rocq, Lean, or Dafny code files, and edited in Emacs with ``alectryon-mode``. [fc10efc9, 6095200c]
 
