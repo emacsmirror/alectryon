@@ -1,5 +1,12 @@
 var Alectryon;
 (function(Alectryon) {
+    function onReady(fn) {
+        if (document.readyState === 'loading')
+            document.addEventListener('DOMContentLoaded', fn);
+        else
+            fn();
+    }
+
     (function (slideshow) {
         function anchor(sentence) { return "#" + sentence.id; }
 
@@ -132,7 +139,8 @@ var Alectryon;
         slideshow.navigate = navigate;
         slideshow.next = function() { navigate(slideshow.pos + 1); };
         slideshow.previous = function() { navigate(slideshow.pos + -1); };
-        window.addEventListener('DOMContentLoaded', init);
+
+        onReady(init);
     })(Alectryon.slideshow || (Alectryon.slideshow = {}));
 
     (function (styles) {
@@ -165,7 +173,7 @@ var Alectryon;
             }
         }
 
-        window.addEventListener('DOMContentLoaded', init);
+        onReady(init);
 
         styles.setStyle = setStyle;
     })(Alectryon.styles || (Alectryon.styles = {}));
