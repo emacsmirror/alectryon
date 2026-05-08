@@ -487,6 +487,17 @@ From Python, set ``alectryon.docutils.CACHE_DIRECTORY`` to enable caching.  For 
 
 See `<recipes/caching.v>`__ for an example.
 
+With non-docutils builders
+--------------------------
+
+To integrate with a build system not based on docutils or Python, use Alectryon as an HTML-to-HTML filter: use ``--frontend html``, ``--backend webpage``, and optionally ``--stdin-filename`` if feeding the file contents through standard input.
+
+- Pass ``--body-only`` if you don't want Alectryon to add JS and CSS assets to your document's ``<head>`` tag (or if it doesn't have one).
+- Pass ``--copy-assets none`` if you don't want Alectryon to copy JS and CSS assets to the output directory.
+- Pass ``--cache-directory`` to speed up recompilations.
+
+See `<recipes/tests/body_only.html>`__ for an example.
+
 With a custom driver
 --------------------
 

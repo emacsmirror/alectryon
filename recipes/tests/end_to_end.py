@@ -107,6 +107,36 @@ A test:
     def _postprocess(self, output):
         return self.BODY_RE.search(output).group("contents").strip()
 
+class HTMLBodyOnly(PipelineTest):
+    """Mixin for HTML → HTML --body-only tests."""
+
+    IN_FNAME, OUT_FNAME = "in.html", "out.body.html"
+    ARGS = ("--frontend", "html", "--backend", "webpage", "--body-only",
+            "--copy-assets", "none")
+
+    EXPECT: tuple[str, ...] = ()
+    REJECT: tuple[str, ...] = ()
+
+    def test_pipeline(self):
+        out = self._main()
+        for s in self.EXPECT:
+            self.assertIn(s, out)
+        for s in self.REJECT:
+            self.assertNotIn(s, out)
+
+class HTMLBodyOnlyFragment(HTMLBodyOnly, unittest.TestCase):
+    IN = '<section><p>x</p><pre class="alectryon">Check nat.</pre></section>'
+    EXPECT = ("<section>", "<p>x</p>", "alectryon-io")
+    REJECT = ("<head>", "alectryon.css", "alectryon.js",
+              "alectryon-root", "alectryon-banner")
+
+class HTMLBodyOnlyFullDoc(HTMLBodyOnly, unittest.TestCase):
+    IN = ('<html><head><title>t</title></head><body>'
+          '<pre class="alectryon">Check nat.</pre></body></html>')
+    EXPECT = ("<title>t</title>", "alectryon-io",
+              "alectryon-root", "alectryon-banner")
+    REJECT = ("alectryon.css", "alectryon.js")
+
 if __name__ == '__main__':
     from io import StringIO
     r = unittest.main(testRunner=unittest.TextTestRunner(stream=StringIO()), exit=False).result

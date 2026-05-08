@@ -1,0 +1,18 @@
+<section>
+  <h1>Body-only HTML</h1>
+
+  To compile::
+  <pre>
+    alectryon --body-only body_only.html -o body_only.annotated.html
+      # HTML → HTML, body-only; produces ‘body_only.annotated.html’
+  </pre>
+
+  <pre class="alectryon" data-lang="coq" data-io="none">
+Require Import Arith.
+  </pre>
+  <pre class="alectryon">
+Goal 1+1 = 2. (* .unfold *)
+  auto with arith.
+Qed.
+  </pre>
+</section>

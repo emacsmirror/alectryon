@@ -12,14 +12,19 @@ _output/tests/alternative_clis.out: tests/alternative_clis.py | _output/tests/
 	$(PYTHON) $< > $@
 tests_targets += _output/tests/alternative_clis.out
 
-# reST → HTML
-_output/tests/body_only.html: tests/body_only.rst
+# HTML → HTML, body-only
+_output/tests/body_only.annotated.html: tests/body_only.html
 	$(alectryon) --body-only $< -o $@
-tests_targets += _output/tests/body_only.html
+tests_targets += _output/tests/body_only.annotated.html
+
+# reST → HTML
+_output/tests/body_only.body.html: tests/body_only.rst
+	$(alectryon) --body-only $< -o $@
+tests_targets += _output/tests/body_only.body.html
 # reST → LaTeX
-_output/tests/body_only.tex: tests/body_only.rst
+_output/tests/body_only.body.tex: tests/body_only.rst
 	$(alectryon) --body-only --backend latex $< -o $@
-tests_targets += _output/tests/body_only.tex
+tests_targets += _output/tests/body_only.body.tex
 
 # Coq → HTML (cached)
 _output/tests/cache_v1.html: tests/cache_v1.v

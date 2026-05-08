@@ -384,7 +384,7 @@ def copy_assets(state, assets: List[Tuple[str, Union[str, core.Asset]]],
 
     return state
 
-def _gen_html_header(html_minification, assets):
+def _gen_html_header(html_minification):
     from dominate.util import raw, container
     from dominate import tags
     from . import GENERATOR
@@ -404,11 +404,13 @@ def _gen_html_header(html_minification, assets):
     for js in ASSETS.ALECTRYON_JS:
         head.add(tags.script(src=js))
 
+    return head
+
+def _record_html_assets(assets):
+    from .html import ASSETS
     _record_assets(assets, ASSETS.PATH, ASSETS.ALECTRYON_CSS)
     _record_assets(assets, ASSETS.PATH, ASSETS.ALECTRYON_JS)
     _record_assets(assets, ASSETS.PATH, ASSETS.PYGMENTS_CSS)
-
-    return head
 
 def _add_html_minification_class(html_classes, html_minification):
     if html_minification:
@@ -432,7 +434,8 @@ def dump_html_standalone(snippets, fname, webpage_style,
 
     doc.head.add(tags.meta(charset="utf-8"))
     doc.head.add(raw(s) for s in HTML4_VIEWPORT)
-    doc.head.add(_gen_html_header(html_minification, assets))
+    doc.head.add(_gen_html_header(html_minification))
+    _record_html_assets(assets)
 
     _add_html_minification_class(html_classes, html_minification)
     cls = wrap_classes(webpage_style, *html_classes)
@@ -473,20 +476,27 @@ def parse_html(state, input_language, ctx) -> list[CodeSnippet]:
     return document.snippets
 
 def unparse_html(chunks, document, html_minification, include_banner,
-                 assets, html_classes, webpage_style, ctx) -> str:
+                 assets, html_classes, webpage_style, body_only, ctx) -> str:
     """Replace code blocks in `document` with annotated `chunks`."""
     from bs4.element import PreformattedString
     from .html import wrap_classes
+
     document.update(chunks)
 
-    head, body = document.soup.find("head"), document.soup.find("body")
-    head.append(PreformattedString(_gen_html_header(html_minification, assets).render()))
+    if not (head := document.soup.find("head")) and not body_only:
+        raise ValueError("Missing <head>; try --body-only?")
+    if not (body := document.soup.find("body")) and not body_only:
+        raise ValueError("Missing <body>; try --body-only?")
 
-    _add_html_minification_class(html_classes, html_minification)
-    body["class"] = body.get("class", []) + [wrap_classes(webpage_style, *html_classes)]
+    _record_html_assets(assets)
+    if not body_only: # body_only never touches <head>
+        head.append(PreformattedString(_gen_html_header(html_minification).render()))
 
-    if include_banner:
-        body.insert(0, PreformattedString(ctx_invoke(_get_banner, ctx)))
+    if body: # body_only tags body if there's one, but doesn't complain otherwise
+        _add_html_minification_class(html_classes, html_minification)
+        body["class"] = body.get("class", []) + [wrap_classes(webpage_style, *html_classes)]
+        if include_banner:
+            body.insert(0, PreformattedString(ctx_invoke(_get_banner, ctx)))
 
     return str(document.soup)
 
@@ -921,7 +931,7 @@ def post_process_arguments(parser, args):
         def err(component, fpath):
             parser.error(f"{component} (for input {fpath!r}) does not support --body-only.")
         for (fpath, frontend, backend, _) in args.pipelines:
-            if frontend in ("latex", "html", "coqdoc"):
+            if frontend in ("latex", "coqdoc"):
                 err(f"Frontend {frontend!r}", fpath)
             if backend not in DOCUTILS_BODY_PART:
                 err(f"Backend {backend!r}", fpath)

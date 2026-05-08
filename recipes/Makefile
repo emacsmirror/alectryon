@@ -81,7 +81,7 @@ _output/latex.aux/%.lua.pdf: _output/%.lua.tex | $$(dir $$@)
 _output/latex.aux/%.pdf: _output/%.tex | $$(dir $$@)
 	$(TEXFOT) latexmk -cd -pdf -output-directory=$(shell realpath --relative-to $(dir $<) $(dir $@)) $<
 
-other += $(patsubst %.tex,%.pdf,$(filter-out %.snippets.tex %.part.tex,$(filter %.tex,$(targets))))
+other += $(patsubst %.tex,%.pdf,$(filter-out %.snippets.tex %.part.tex %.body.tex,$(filter %.tex,$(targets))))
 
 ###############
 # Entry point #
