@@ -20,8 +20,8 @@
 
 from __future__ import annotations
 
-from typing import Any, ClassVar, DefaultDict, Dict, Generic, Iterable, IO, List, \
-    Mapping, NamedTuple, NoReturn, Optional, overload, Sequence, \
+from typing import Any, Callable, ClassVar, DefaultDict, Dict, Generic, Iterable, IO, \
+    Iterator, List, Mapping, NamedTuple, NoReturn, Optional, overload, Sequence, \
     TYPE_CHECKING, Tuple, TypeVar, Union
 
 from collections import UserDict, deque, namedtuple, defaultdict
@@ -219,6 +219,35 @@ T = TypeVar("T")
 def must(x: Optional[T]) -> T:
     assert x is not None
     return x
+
+K = TypeVar("K")
+U = TypeVar("U")
+
+def group_by(items: Iterable[T], key: Callable[[T], Optional[K]]) -> Dict[K, List[T]]:
+    """Partition `items` into a dict keyed by ``key(item)``, sorted by key, dropping `None`."""
+    groups: Dict[K, List[T]] = {}
+    for it in items:
+        if (k := key(it)) is not None:
+            groups.setdefault(k, []).append(it)
+    return dict(sorted(groups.items()))
+
+def ungroup_by(items: Iterable[T], groups: Mapping[K, Iterable[U]],
+               key: Callable[[T], Optional[K]]) -> Iterator[Union[T, U]]:
+    """Walk `items` and pop one element from ``groups[key(item)]`` each time;
+    if ``key(item)`` is ``None``, pass the item through."""
+    iters = {k: iter(vs) for k, vs in groups.items()}
+    for it in items:
+        k = key(it)
+        yield it if k is None else must(next(iters[k], None))
+    assert all(next(it, None) is None for it in iters.values())
+
+def by_group(items: Iterable[T], key: Callable[[T], Optional[K]],
+             fn: Callable[[K, List[T]], Iterable[U]]) -> List[Union[T, U]]:
+    """Group `items` by `key`, run `fn` on each group, then ungroup."""
+    items = list(items)
+    grouped = group_by(items, key)
+    outputs = {k: fn(k, g) for k, g in grouped.items()}
+    return list(ungroup_by(items, outputs, key))
 
 @contextmanager
 def nullctx():

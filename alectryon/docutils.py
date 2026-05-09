@@ -88,7 +88,7 @@ from docutils.writers import html4css1, html5_polyglot, latex2e, xetex
 
 from . import core, transforms, html, latex, markers
 from .myst import Parser as MySTParser
-from .core import Gensym, Position, PosStr, Range, _Path
+from .core import Gensym, Position, PosStr, Range, _Path, group_by
 from .pygments import make_highlighter, added_tokens, validate_style, \
     get_lexer, resolve_token, replace_builtin_lexers
 
@@ -389,10 +389,7 @@ class DocutilsObserver(core.Observer):
         _system_message(self.document, **n.as_docutils())
 
 def by_lang(pending_nodes: Iterable[nodes.pending]) -> Dict[str, List[nodes.pending]]:
-    partitioned: Dict[str, List[nodes.pending]] = {}
-    for node in pending_nodes:
-        partitioned.setdefault(node.details["lang"], []).append(node)
-    return dict(sorted(partitioned.items()))
+    return group_by(pending_nodes, key=lambda n: n.details["lang"])
 
 class AlectryonTransform(OneTimeTransform):
     default_priority = 800

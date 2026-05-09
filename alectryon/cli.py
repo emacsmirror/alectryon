@@ -39,7 +39,7 @@ import sys
 from pathlib import Path
 
 from . import __version__, core
-from .core import must
+from .core import group_by, must, ungroup_by
 
 # Pipelines
 # =========
@@ -63,6 +63,10 @@ class CodeSnippet:
     io_annots: "Optional[IOAnnots]"
     contents: Any
 
+    @staticmethod
+    def _polyglot_key(item: Any) -> Optional[str]:
+        return item.lang if isinstance(item, CodeSnippet) else None
+
     @classmethod
     def of_text(cls, lang: str, annots: str, text: str, **kwargs):
         from .transforms import read_all_io_flags
@@ -75,10 +79,7 @@ class CodeSnippet:
 
     @staticmethod
     def _by_lang(snippets: list["CodeSnippet"]) -> "SnippetCollection":
-        bylang: "SnippetCollection" = {}
-        for snippet in snippets:
-            bylang.setdefault(snippet.lang, []).append(snippet)
-        return bylang
+        return group_by(snippets, key=CodeSnippet._polyglot_key)
 
     @staticmethod
     def _update(snippets: list["CodeSnippet"], items: Iterable[Any]) -> Iterable["CodeSnippet"]:
@@ -87,12 +88,7 @@ class CodeSnippet:
 
     @staticmethod
     def _flatten_by_lang(blocks: "Blocks", by_lang: "SnippetCollection"):
-        iters = { k: iter(vs) for k, vs in by_lang.items() }
-        for block in blocks:
-            if isinstance(block, CodeSnippet):
-                block = must(next(iters[block.lang], None))
-            yield block
-        assert all(next(it, None) is None for it in iters.values())
+        return ungroup_by(blocks, by_lang, key=CodeSnippet._polyglot_key)
 
     @staticmethod
     def _recover_blocks(blocks: "Blocks", snippets: Iterable[CodeSnippet]):
