@@ -4,6 +4,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Processing snippets embedded within an HTML document</title>
+    <style>
+      .large { font-size: 2em; }
+    </style>
   </head>
   <body>
     <p>This file shows how to process an HTML file with Alectryon.  To compile it, use the following command:</p>
@@ -15,7 +18,7 @@
     <pre class="alectryon" data-lang="coq" data-io="none">
 Require Import ZArith.
     </pre>
-    <pre class="alectryon">
+    <pre class="alectryon large" id="goal-true" style="background: #eee">
 Goal True /\ True.
   split. (* .unfold *)
   - exact I.

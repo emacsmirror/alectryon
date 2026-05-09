@@ -506,6 +506,16 @@ class ParsedHTMLDocument:
         tags: ResultSet = soup.select(cls.HTML_CODE_BLOCK_SELECTOR)
         return cls(soup), [HTMLCodeSnippet.of_tag(t, input_language) for t in tags]
 
+    HTML_CONSUMED_ATTRS: ClassVar[set] = {"data-lang", "data-io", "class"}
+
+    @classmethod
+    def _copy_attributes(cls, src, dst):
+        if classes := src.get("class"):
+            dst["class"] += " " + " ".join(classes)
+        for name, value in src.attrs.items():
+            if name not in cls.HTML_CONSUMED_ATTRS:
+                dst[name] = value
+
     @staticmethod
     def update(snippets):
         from bs4.element import PreformattedString
@@ -513,6 +523,7 @@ class ParsedHTMLDocument:
             if snippet.contents is None:
                 snippet.tag.decompose()
             else:
+                ParsedHTMLDocument._copy_attributes(snippet.tag, snippet.contents)
                 snippet.tag.replace_with(PreformattedString(str(snippet.contents)))
 
 def _filter_snippets(blocks):
