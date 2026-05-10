@@ -1028,6 +1028,7 @@ class DriverConfigs:
     """Per-language driver configuration."""
     language_drivers: MutableMapping[str, str]
     driver_args: Dict[str, List[str]]
+    observer: Observer = field(default_factory=StderrObserver)
     drivers: Dict[str, DriverConfig] = field(init=False)
 
     def __post_init__(self):
@@ -1038,13 +1039,88 @@ class DriverConfigs:
     def default(cls) -> "DriverConfigs":
         return cls(DEFAULT_DRIVERS.copy(), {d: [] for d in ALL_DRIVERS})
 
-    def copy(self) -> "DriverConfigs":
-        return type(self)(self.language_drivers.copy(),
-                          {k: list(v) for k, v in self.driver_args.items()})
-
     def __getitem__(self, lang: str) -> DriverConfig:
         return self.drivers[lang]
 
     def banner(self, fpath: _Path) -> List[DriverInfo]:
         return [dc.init_driver(fpath).version_info()
                 for dc in self.drivers.values() if dc.used]
+
+    def init_driver(self, lang: str, fpath: _Path) -> Driver:
+        driver = self.drivers[lang].init_driver(fpath)
+        driver.observer = self.observer
+        return driver
+
+    def _annotate_or_skip(self, key, group, fpath, caches):
+        chunks = CodeSnippet.unwrap(group)
+        if key.skipped:
+            from .noop import NoOp
+            return NoOp().annotate(chunks)
+        driver = self.init_driver(key.lang, fpath)
+        return caches[key.lang].update(chunks, driver)
+
+    def annotate(self, snippets, fpath, cache_directory, cache_compression) -> List["CodeSnippet"]:
+        from .json import CacheSet
+        def annotate_one(key, group, caches):
+            annotated = self._annotate_or_skip(key, group, fpath, caches)
+            return CodeSnippet._update(group, annotated)
+        with CacheSet(cache_directory, fpath, cache_compression) as caches:
+            grouped = group_by(snippets, key=CodeSnippet._polyglot_key)
+            annotated = {k: annotate_one(k, g, caches) for k, g in grouped.items()}
+            result = list(ungroup_by(snippets, annotated,
+                                     key=CodeSnippet._polyglot_key))
+        return result
+
+    def annotate_chunks(self, chunks, lang, fpath, cache_directory, cache_compression) -> list:
+        snippets = [CodeSnippet(lang, None, c) for c in chunks]
+        annotated = self.annotate(snippets, fpath, cache_directory, cache_compression)
+        return CodeSnippet.unwrap(annotated)
+
+class SnippetCollectionKey(NamedTuple):
+    lang: str
+    skipped: bool
+
+@dataclass
+class CodeSnippet:
+    lang: str
+    io_annots: Optional["IOAnnots"]
+    contents: Any
+
+    @property
+    def skipped(self) -> bool:
+        return bool(self.io_annots and self.io_annots.skip)
+
+    @staticmethod
+    def _polyglot_key(item) -> Optional[SnippetCollectionKey]:
+        if isinstance(item, CodeSnippet):
+            return SnippetCollectionKey(item.lang, item.skipped)
+        return None
+
+    @classmethod
+    def of_text(cls, lang: str, annots: str, text: str, **kwargs) -> "CodeSnippet":
+        from .transforms import read_all_io_flags
+        if lang not in ALL_LANGUAGES:
+            raise ValueError(f"Unsupported language: {lang!r}")
+        return cls(lang, read_all_io_flags(annots), text, **kwargs)
+
+    def with_contents(self, c: Any) -> "CodeSnippet":
+        return replace(self, contents=c)
+
+    @staticmethod
+    def unwrap(snippets: Iterable["CodeSnippet"]) -> list:
+        return [s.contents for s in snippets]
+
+    @staticmethod
+    def _update(snippets: Sequence["CodeSnippet"], items: Iterable[Any]) -> Iterable["CodeSnippet"]:
+        for snippet, it in zip(snippets, items):
+            yield snippet.with_contents(it)
+
+    @staticmethod
+    def _recover_blocks(blocks: Iterable[Union[T, "CodeSnippet"]],
+                        snippets: Iterable["CodeSnippet"]) -> Iterator[Union[T, "CodeSnippet"]]:
+        it = iter(snippets)
+        for block in blocks:
+            if isinstance(block, CodeSnippet):
+                block = must(next(it, None))
+            yield block
+        assert next(it, None) is None

@@ -64,6 +64,7 @@ from types import FunctionType, MethodType
 from typing import Any, Callable, ClassVar, DefaultDict, Dict, Iterable, \
     List, Mapping, Optional, Tuple, Type, TypeVar, Union
 
+import dataclasses
 import re
 from pathlib import Path
 from copy import deepcopy
@@ -88,7 +89,7 @@ from docutils.writers import html4css1, html5_polyglot, latex2e, xetex
 
 from . import core, transforms, html, latex, markers
 from .myst import Parser as MySTParser
-from .core import Gensym, Position, PosStr, Range, _Path, group_by, ungroup_by
+from .core import Gensym, Position, PosStr, Range, _Path, group_by
 from .pygments import make_highlighter, added_tokens, validate_style, \
     get_lexer, resolve_token, replace_builtin_lexers
 
@@ -259,7 +260,8 @@ class Config:
     def __init__(self, document):
         self.tokens_by_lang = defaultdict(self._token_dict)
         self.document = document
-        self.driver_configs = AlectryonTransform.DRIVER_CONFIGS.copy()
+        self.driver_configs = DocutilsDriverConfigs(
+            AlectryonTransform.DRIVER_CONFIGS, document)
         self.read_docinfo()
 
     def read_docinfo(self):
@@ -382,6 +384,22 @@ class DocutilsObserver(core.Observer):
     def _notify(self, n: core.Notification):
         _system_message(self.document, **n.as_docutils())
 
+@dataclasses.dataclass
+class DocutilsCodeSnippet(core.CodeSnippet):
+    pending: Any = None  # nodes.pending; defaulted because of dataclass inheritance rules
+
+    @classmethod
+    def of_pending(cls, p: nodes.pending) -> "DocutilsCodeSnippet":
+        return cls(p.details["lang"], p.details["directive_annots"],
+                   p.details["contents"], pending=p)
+
+class DocutilsDriverConfigs(core.DriverConfigs):
+    def __init__(self, other: core.DriverConfigs, document):
+        super().__init__(
+            other.language_drivers.copy(),
+            {k: list(v) for k, v in other.driver_args.items()},
+            observer=DocutilsObserver(document))
+
 def by_lang(pending_nodes: Iterable[nodes.pending]) -> Dict[str, List[nodes.pending]]:
     return group_by(pending_nodes, key=lambda n: n.details["lang"])
 
@@ -431,21 +449,6 @@ class AlectryonTransform(OneTimeTransform, metaclass=_AlectryonTransformMeta):
             _system_message(self.document, self.document.reporter.WARNING_LEVEL,
                             msg, base_node=node, **opts)
 
-    def annotate(self, pending_nodes, lang, cache):
-        from .noop import NoOp
-        def is_skipped(p):
-            return bool(p.details["directive_annots"].skip)
-        def run(skipped, group):
-            chunks = [p.details["contents"] for p in group]
-            if skipped:
-                return NoOp().annotate(chunks)
-            driver = alectryon_state(self.document).config.init_driver(lang)
-            driver.observer = DocutilsObserver(self.document)
-            return cache.update(chunks, driver)
-        by_skipped = group_by(pending_nodes, key=is_skipped)
-        annotated = {k: run(k, v) for k, v in by_skipped.items()}
-        return list(ungroup_by(pending_nodes, annotated, key=is_skipped))
-
     def replace_node(self, pending, fragments, lang):
         directive_annots = pending.details["directive_annots"]
 
@@ -460,13 +463,14 @@ class AlectryonTransform(OneTimeTransform, metaclass=_AlectryonTransformMeta):
         io["ids"] = [Id(self.document, i) for i in io.get("ids", ())]
 
     def apply_drivers(self):
-        from .json import CacheSet
-        all_pending = by_lang(self.document.findall(alectryon_pending))
-        with CacheSet(CACHE_DIRECTORY, self.document['source'], CACHE_COMPRESSION) as caches:
-            for lang, pending_nodes in all_pending.items():
-                annotated = self.annotate(pending_nodes, lang, caches[lang])
-                for node, fragments in zip(pending_nodes, annotated):
-                    self._try(self.replace_node, node, fragments, lang)
+        pendings = list(self.document.findall(alectryon_pending))
+        snippets = [DocutilsCodeSnippet.of_pending(p) for p in pendings]
+        driver_configs = alectryon_state(self.document).config.driver_configs
+        annotated = driver_configs.annotate(
+            snippets, self.document['source'] or "-",
+            CACHE_DIRECTORY, CACHE_COMPRESSION)
+        for s in annotated:
+            self._try(self.replace_node, s.pending, s.contents, s.lang)
 
     @staticmethod
     def split_around(node):

@@ -20,11 +20,10 @@
 
 from __future__ import annotations
 
-from typing import Any, ClassVar, Dict, Iterable, NamedTuple, Optional, Sequence, Tuple, List, Union, TYPE_CHECKING
+from typing import Any, ClassVar, Dict, Iterable, Optional, Sequence, Tuple, List, Union, TYPE_CHECKING
 
 if TYPE_CHECKING:
     from bs4 import BeautifulSoup, ResultSet, Tag
-    from .transforms import IOAnnots
     from .typst import TypstDocument, TypstCodeSnippet
 
 import argparse
@@ -39,7 +38,7 @@ import sys
 from pathlib import Path
 
 from . import __version__, core
-from .core import group_by, must, ungroup_by
+from .core import CodeSnippet
 
 # Pipelines
 # =========
@@ -56,53 +55,6 @@ def read_json(_, fpath, input_is_stdin):
 
 def parse_plain(contents, fpath):
     return [core.PosStr(contents, core.Position.default(fpath), 0)]
-
-class SnippetCollectionKey(NamedTuple):
-    lang: str
-    skipped: bool
-
-Blocks = Sequence[Union[str, "CodeSnippet"]]
-SnippetCollection = dict[SnippetCollectionKey, list["CodeSnippet"]]
-
-@dataclasses.dataclass
-class CodeSnippet:
-    lang: str
-    io_annots: "Optional[IOAnnots]"
-    contents: Any
-
-    @property
-    def skipped(self) -> bool:
-        return bool(self.io_annots and self.io_annots.skip)
-
-    @staticmethod
-    def _polyglot_key(item) -> Optional[SnippetCollectionKey]:
-        if isinstance(item, CodeSnippet):
-            return SnippetCollectionKey(item.lang, item.skipped)
-        return  None
-
-    @classmethod
-    def of_text(cls, lang: str, annots: str, text: str, **kwargs):
-        from .transforms import read_all_io_flags
-        if lang not in core.ALL_LANGUAGES:
-            raise ValueError(f"Unsupported language: {lang!r}")
-        return cls(lang, read_all_io_flags(annots), text, **kwargs)
-
-    def with_contents(self, c: Any) -> "CodeSnippet":
-        return dataclasses.replace(self, contents=c)
-
-    @staticmethod
-    def _update(snippets: list["CodeSnippet"], items: Iterable[Any]) -> Iterable["CodeSnippet"]:
-        for snippet, it in zip(snippets, items):
-            yield snippet.with_contents(it)
-
-    @staticmethod
-    def _recover_blocks(blocks: "Blocks", snippets: Iterable[CodeSnippet]):
-        it = iter(snippets)
-        for block in blocks:
-            if isinstance(block, CodeSnippet):
-                block = must(next(it, None))
-            yield block
-        assert next(it, None) is None
 
 def _catch_parsing_errors(fpath, k, *args):
     from .literate import ParsingError
@@ -121,39 +73,21 @@ def markup_to_code(rst, fpath, point, marker, frontend, backend):
     markup = get_markup(frontend, backend.split("+")[0])
     return _catch_parsing_errors(fpath, markup2code_marked, markup, rst, point, marker)
 
-def _annotate_chunks(chunks, fpath, driver_config, cache, exit_code):
-    from .core import StderrObserver
-    driver = driver_config.init_driver(fpath)
-    annotated = cache.update(chunks, driver)
-    assert isinstance(driver.observer, StderrObserver)
-    exit_code.val = int(exit_code.val or driver.observer.exit_code >= 3)
+def annotate_snippets(snippets, fpath, cache_directory, cache_compression,
+                      driver_configs, exit_code):
+    annotated = driver_configs.annotate(snippets, fpath, cache_directory,
+                                        cache_compression)
+    exit_code.val = int(exit_code.val or driver_configs.observer.exit_code >= 3)
     return annotated
-
-def _annotate_or_skip(key: SnippetCollectionKey, snippets: list[CodeSnippet],
-                      fpath, driver_configs: core.DriverConfigs, caches,
-                      exit_code):
-    chunks = [s.contents for s in snippets]
-    if key.skipped:
-        from .noop import NoOp
-        return NoOp().annotate(chunks)
-    return _annotate_chunks(chunks, fpath, driver_configs[key.lang], caches[key.lang], exit_code)
-
-def annotate_snippets(snippets: list[CodeSnippet], fpath, cache_directory, cache_compression, driver_configs, exit_code):
-    from .json import CacheSet
-    def annotate_one(key, snippets, caches):
-        annotated = _annotate_or_skip(key, snippets, fpath, driver_configs, caches, exit_code)
-        return CodeSnippet._update(snippets, annotated)
-    with CacheSet(cache_directory, fpath, cache_compression) as caches:
-        grouped = group_by(snippets, key=CodeSnippet._polyglot_key)
-        annotated = { key: annotate_one(key, snippets, caches) for key, snippets in grouped.items() }
-        return list(ungroup_by(snippets, annotated, key=CodeSnippet._polyglot_key))
-    assert False # Satisfy pyright
 
 def annotate_chunks(chunks, fpath, cache_directory, cache_compression,
                     driver_configs, input_language, exit_code):
-    from .json import CacheSet
-    with CacheSet(cache_directory, fpath, cache_compression) as caches:
-        return _annotate_chunks(chunks, fpath, driver_configs[input_language], caches[input_language], exit_code)
+    annotated = driver_configs.annotate_chunks(
+        chunks, input_language, fpath, cache_directory, cache_compression)
+    exit_code.val = int(exit_code.val or driver_configs.observer.exit_code >= 3)
+    return annotated
+
+Blocks = Sequence[Union[str, CodeSnippet]]
 
 def recover_blocks(snippets: list[CodeSnippet], blocks: Blocks):
     return CodeSnippet._recover_blocks(blocks, snippets)
@@ -686,15 +620,6 @@ def on_snippet_contents(*pipeline):
         snippets = list(snippets)
         items = (snippet.contents for snippet in snippets)
         return CodeSnippet._update(snippets, run_pipeline(pipeline, items, ctx))
-    return _dispatch
-
-def by_language(*pipeline):
-    def _dispatch(snippets_by_lang: SnippetCollection, ctx):
-        """Run `pipeline` on each group in `snippets_by_lang`."""
-        return {
-            lang: run_pipeline(pipeline, snippets, { **ctx, "input_language": lang })
-            for lang, snippets in snippets_by_lang.items()
-        }
     return _dispatch
 
 CODE_EXTENSIONS = {
