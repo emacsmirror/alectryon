@@ -131,13 +131,6 @@ def _annotate_chunks(chunks, fpath, driver_config, cache, exit_code):
     exit_code.val = int(exit_code.val or driver.observer.exit_code >= 3)
     return annotated
 
-def annotate_chunks(chunks, fpath, cache_directory, cache_compression,
-                    driver_configs, input_language, exit_code):
-    from .json import CacheSet
-    with CacheSet(cache_directory, fpath, cache_compression) as caches:
-        return _annotate_chunks(chunks, fpath, driver_configs[input_language],
-                                caches[input_language], exit_code)
-
 def _update_snippets(snippets, fpath, driver_config, cache, exit_code):
     from .noop import NoOp
     def key(s: CodeSnippet) -> bool:
@@ -156,15 +149,20 @@ def annotate_polyglot(snippets: list[CodeSnippet], fpath, cache_directory, cache
                       driver_configs, exit_code):
     from .json import CacheSet
     with CacheSet(cache_directory, fpath, cache_compression) as caches:
-        return {
-            lang: _update_snippets(snippets, fpath,
-                                     driver_configs[lang], caches[lang],
-                                     exit_code)
-            for lang, snippets in CodeSnippet._by_lang(snippets).items()
+        by_lang = {
+            lang: list(_update_snippets(group, fpath,
+                                        driver_configs[lang], caches[lang],
+                                        exit_code))
+            for lang, group in CodeSnippet._by_lang(snippets).items()
         }
+    return list(ungroup_by(snippets, by_lang, key=CodeSnippet._polyglot_key))
 
-def flatten_by_lang(by_lang, blocks: Blocks):
-    return _filter_snippets(CodeSnippet._flatten_by_lang(blocks, by_lang))
+def annotate_chunks(chunks, fpath, cache_directory, cache_compression,
+                    driver_configs, input_language, exit_code):
+    snippets = [CodeSnippet(input_language, None, c) for c in chunks]
+    annotated = annotate_polyglot(snippets, fpath, cache_directory,
+                                  cache_compression, driver_configs, exit_code)
+    return [s.contents for s in annotated]
 
 def recover_blocks(snippets: list[CodeSnippet], blocks: Blocks):
     return CodeSnippet._recover_blocks(blocks, snippets)
@@ -792,7 +790,7 @@ def _add_special_pipelines(pipelines):
     pipelines['latex'] = {
         'latex':
         (read_plain, parse_latex, per_snippet(read_io_comment_header),
-         annotate_polyglot, flatten_by_lang,
+         annotate_polyglot,
          inherit_io_annots, on_snippet_contents(apply_transforms),
          remove_hidden_snippets, on_snippet_contents(gen_latex_snippets),
          recover_blocks, unparse_latex,
@@ -801,7 +799,7 @@ def _add_special_pipelines(pipelines):
     pipelines['html'] = {
         'webpage':
         (read_plain, parse_html, per_snippet(read_io_comment_header),
-         annotate_polyglot, flatten_by_lang,
+         annotate_polyglot,
          inherit_io_annots, on_snippet_contents(apply_transforms),
          remove_hidden_snippets, on_snippet_contents(gen_html_snippets),
          unparse_html, copy_assets, write_file(".annotated.html", strip=(".html",)))
@@ -812,7 +810,7 @@ def _add_special_pipelines(pipelines):
          # ``copy_assets`` must run before ``parse_typst`` so the user's document
          # can ````#import "alectryon.typ"```` from the output directory.
          copy_assets, parse_typst, per_snippet(read_io_comment_header),
-         annotate_polyglot, flatten_by_lang,
+         annotate_polyglot,
          inherit_io_annots, on_snippet_contents(apply_transforms),
          # ``resolve_typst_mrefs`` runs before ``remove_hidden_snippets`` so
          # ``mquote`` can find ``.none`` blocks.
