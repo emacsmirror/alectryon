@@ -34,7 +34,7 @@ import subprocess
 from collections.abc import Iterable
 from functools import cached_property, wraps
 from pathlib import Path
-from typing import Any, Callable, List, Optional, Tuple, TypeVar, Union
+from typing import Any, List, Optional, Sequence, Tuple, Union
 
 from .cli import CodeSnippet
 from .core import JSON, Backend, Goals, Messages, Text, \
@@ -268,7 +268,7 @@ class TypstDocument:
                 block_idx = 0 if block_idx is None else block_idx + 1
                 snippets.append(snippet)
 
-    def resolve(self, snippets: list[TypstCodeSnippet]) -> None:
+    def resolve(self, snippets: Sequence[TypstCodeSnippet]) -> None:
         """Resolve ``mref``/``mquote``/``massert`` references."""
         self.resolver = TypstResolver(self.references, self.fname, snippets)
         self.resolver.run()
@@ -282,7 +282,7 @@ class TypstDocument:
 
 class TypstResolver:
     def __init__(self, references: References, fname: str,
-                 snippets: list[TypstCodeSnippet]) -> None:
+                 snippets: Sequence[TypstCodeSnippet]) -> None:
         from docutils import nodes
         from .core import Gensym
         from .docutils import RefCounter

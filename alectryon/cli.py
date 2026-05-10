@@ -20,12 +20,12 @@
 
 from __future__ import annotations
 
-from typing import Any, ClassVar, Dict, Iterable, Optional, Sequence, Tuple, List, Union, TYPE_CHECKING
+from typing import Any, ClassVar, Dict, Iterable, NamedTuple, Optional, Sequence, Tuple, List, Union, TYPE_CHECKING
 
 if TYPE_CHECKING:
     from bs4 import BeautifulSoup, ResultSet, Tag
     from .transforms import IOAnnots
-    from .typst import TypstDocument
+    from .typst import TypstDocument, TypstCodeSnippet
 
 import argparse
 import dataclasses
@@ -617,7 +617,7 @@ def parse_typst(_, fpath: str, ctx):
     from .typst import TypstDocument
     return _record_parse(ctx, *TypstDocument.from_path(Path.cwd(), Path(fpath)))
 
-def resolve_typst_mrefs(snippets: Iterable[CodeSnippet],
+def resolve_typst_mrefs(snippets: Iterable["TypstCodeSnippet"],
                         document: "TypstDocument") -> list[CodeSnippet]:
     """Resolve markers in `document`."""
     snippets = list(snippets)
