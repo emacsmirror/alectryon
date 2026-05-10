@@ -18,7 +18,10 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-from typing import Dict, Any, Optional, Tuple
+from typing import Dict, Any, Optional, Tuple, TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from typing_extensions import Self
 
 import json
 import pickle
@@ -321,11 +324,11 @@ class Cache:
         return annotated
 
 class BaseCacheSet:
-    def __enter__(self):
+    def __enter__(self) -> "Self":
         raise NotImplementedError()
-    def __exit__(self, exc_type, exc_val, exc_tb):
+    def __exit__(self, exc_type, exc_val, exc_tb) -> bool:
         raise NotImplementedError()
-    def __getitem__(self, lang):
+    def __getitem__(self, lang) -> Cache:
         raise NotImplementedError()
 
 class TrivialCacheSet(BaseCacheSet):
