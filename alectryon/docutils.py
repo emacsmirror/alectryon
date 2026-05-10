@@ -172,7 +172,6 @@ def _try(document, fn, node, *args, **kwargs):
 # LATER: dataclass
 class AlectryonState:
     def __init__(self, document):
-        self.drivers_info: List[core.DriverInfo] = []
         self.root_is_code: bool = False
         self.transforms_executed = set()
         self.embedded_assets = []
@@ -259,12 +258,8 @@ class Config:
 
     def __init__(self, document):
         self.tokens_by_lang = defaultdict(self._token_dict)
-        self.language_drivers = AlectryonTransform.LANGUAGE_DRIVERS.copy()
-        self.driver_args: DefaultDict[str, List[str]] = defaultdict(list)
-        for nm, args in AlectryonTransform.DRIVER_ARGS.items():
-            self.driver_args[nm] = list(args)
-        self.driver_args["sertop"].extend(AlectryonTransform.SERTOP_ARGS)
         self.document = document
+        self.driver_configs = AlectryonTransform.DRIVER_CONFIGS.copy()
         self.read_docinfo()
 
     def read_docinfo(self):
@@ -306,8 +301,8 @@ class Config:
         elif name in ("alectryon/serapi/args", "alectryon/rocq/args"):
             import shlex
             args = shlex.split(body)
-            self.driver_args["vsrocq"].extend(args)
-            self.driver_args["sertop"].extend(
+            self.driver_configs.driver_args["vsrocq"].extend(args)
+            self.driver_configs.driver_args["sertop"].extend(
                 a for flag, vals in self.parse_args(args)
                 for a in (flag, ",".join(vals))
             )
@@ -330,8 +325,7 @@ class Config:
                 yield "-" + arg, vals
 
     def init_driver(self, lang):
-        cfg = core.DriverConfig(lang, self.language_drivers, self.driver_args)
-        return cfg.init_driver(fpath=self.document['source'] or "-")
+        return self.driver_configs[lang].init_driver(self.document['source'] or "-")
 
 class OneTimeTransform(Transform):
     is_post_transform = False
@@ -391,15 +385,41 @@ class DocutilsObserver(core.Observer):
 def by_lang(pending_nodes: Iterable[nodes.pending]) -> Dict[str, List[nodes.pending]]:
     return group_by(pending_nodes, key=lambda n: n.details["lang"])
 
-class AlectryonTransform(OneTimeTransform):
+class _AlectryonTransformMeta(type):
+    """Metaclass exposing deprecated class-level aliases for ``DRIVER_CONFIGS``."""
+
+    @staticmethod
+    def _deprecated(field, replacement):
+        import warnings
+        warnings.warn(
+            f"AlectryonTransform.{field} is deprecated; "
+            f"use AlectryonTransform.{replacement} instead.",
+            DeprecationWarning, stacklevel=3)
+
+    @property
+    def LANGUAGE_DRIVERS(cls):
+        cls._deprecated("LANGUAGE_DRIVERS", "DRIVER_CONFIGS.language_drivers")
+        return cls.DRIVER_CONFIGS.language_drivers
+
+    @property
+    def DRIVER_ARGS(cls):
+        cls._deprecated("DRIVER_ARGS", "DRIVER_CONFIGS.driver_args")
+        return cls.DRIVER_CONFIGS.driver_args
+
+    @property
+    def SERTOP_ARGS(cls):
+        cls._deprecated("SERTOP_ARGS", 'DRIVER_CONFIGS.driver_args["sertop"]')
+        return cls.DRIVER_CONFIGS.driver_args["sertop"]
+    @SERTOP_ARGS.setter
+    def SERTOP_ARGS(cls, value):
+        cls._deprecated("SERTOP_ARGS", 'DRIVER_CONFIGS.driver_args["sertop"]')
+        cls.DRIVER_CONFIGS.driver_args["sertop"] = list(value)
+
+class AlectryonTransform(OneTimeTransform, metaclass=_AlectryonTransformMeta):
     default_priority = 800
     auto_toggle = True
 
-    SERTOP_ARGS = ()
-    """DEPRECATED; use DRIVER_ARGS["sertop"] instead."""
-
-    LANGUAGE_DRIVERS: MutableMapping[str, str] = core.DEFAULT_DRIVERS
-    DRIVER_ARGS: Dict[str, Iterable[str]] = {d: () for d in core.ALL_DRIVERS}
+    DRIVER_CONFIGS: ClassVar[core.DriverConfigs] = core.DriverConfigs.default()
 
     def check_for_long_lines(self, node, fragments):
         if LONG_LINE_THRESHOLD is None:
@@ -424,8 +444,7 @@ class AlectryonTransform(OneTimeTransform):
             return cache.update(chunks, driver)
         by_skipped = group_by(pending_nodes, key=is_skipped)
         annotated = {k: run(k, v) for k, v in by_skipped.items()}
-        result = list(ungroup_by(pending_nodes, annotated, key=is_skipped))
-        return cache.driver_info, result
+        return list(ungroup_by(pending_nodes, annotated, key=is_skipped))
 
     def replace_node(self, pending, fragments, lang):
         directive_annots = pending.details["directive_annots"]
@@ -442,12 +461,10 @@ class AlectryonTransform(OneTimeTransform):
 
     def apply_drivers(self):
         from .json import CacheSet
-        state = alectryon_state(self.document)
         all_pending = by_lang(self.document.findall(alectryon_pending))
         with CacheSet(CACHE_DIRECTORY, self.document['source'], CACHE_COMPRESSION) as caches:
             for lang, pending_nodes in all_pending.items():
-                driver_info, annotated = self.annotate(pending_nodes, lang, caches[lang])
-                state.drivers_info.append(driver_info)
+                annotated = self.annotate(pending_nodes, lang, caches[lang])
                 for node, fragments in zip(pending_nodes, annotated):
                     self._try(self.replace_node, node, fragments, lang)
 
@@ -1408,8 +1425,9 @@ def make_HtmlTranslator(base):
 
             include_vernums = document.settings.alectryon_vernums
             if self.settings.alectryon_banner:
-                drivers_info = alectryon_state(document).drivers_info
-                self.body_prefix.append(html.gen_banner(drivers_info, include_vernums))
+                cfgs = alectryon_state(document).config.driver_configs
+                fpath = document['source'] or "-"
+                self.body_prefix.append(html.gen_banner(cfgs.banner(fpath), include_vernums))
             if not include_vernums:
                 self.meta.remove(self.generator)
                 self.meta.append(self.generator.replace(f" {docutils.__version__}", ""))

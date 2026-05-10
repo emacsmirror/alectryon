@@ -178,8 +178,7 @@ DOCUTILS_FUTURE_WARNINGS_SETTINGS_OVERRIDES = {
 def register_docutils(v, ctx):
     from . import docutils
 
-    docutils.AlectryonTransform.DRIVER_ARGS = ctx["driver_args_by_name"]
-    docutils.AlectryonTransform.LANGUAGE_DRIVERS = ctx["language_drivers"]
+    docutils.AlectryonTransform.DRIVER_CONFIGS = ctx["driver_configs"]
     docutils.CACHE_DIRECTORY = ctx["cache_directory"]
     docutils.CACHE_COMPRESSION = ctx["cache_compression"]
     docutils.HTML_MINIFICATION = ctx["html_minification"]
@@ -466,9 +465,7 @@ def _add_html_minification_class(html_classes, html_minification):
 
 def _get_banner(fpath, driver_configs, include_vernums):
     from .html import gen_banner
-    vi = [dc.init_driver(fpath).version_info()
-          for dc in driver_configs.values() if dc.used]
-    return gen_banner(vi, include_vernums)
+    return gen_banner(driver_configs.banner(fpath), include_vernums)
 
 def dump_html_standalone(snippets, fname, webpage_style,
                          html_minification, include_banner,
@@ -1038,7 +1035,7 @@ def post_process_arguments(parser, args):
         args.leanInk_args.extend(("--verbose",))
 
     args.driver_args_by_name = {
-        driver: (getattr(args, field) if field else ())
+        driver: (getattr(args, field) if field else [])
         for driver, field in DRIVER_ARGS_BY_NAME.items()
     }
 
@@ -1289,10 +1286,8 @@ def build_context(fpath, args, frontend, backend):
 
     dialect = args.backend_dialects.get(backend)
 
-    driver_configs = {
-        lang: core.DriverConfig(lang, args.language_drivers, args.driver_args_by_name)
-        for lang in core.ALL_LANGUAGES
-    }
+    driver_configs = core.DriverConfigs(
+        args.language_drivers, args.driver_args_by_name)
 
     input_language = INPUT_LANGUAGE_BY_FRONTEND.get(frontend)
 

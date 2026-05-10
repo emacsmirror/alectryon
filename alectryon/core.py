@@ -21,8 +21,8 @@
 from __future__ import annotations
 
 from typing import Any, Callable, ClassVar, DefaultDict, Dict, Generic, Iterable, IO, \
-    Iterator, List, Mapping, NamedTuple, NoReturn, Optional, overload, Sequence, \
-    TYPE_CHECKING, Tuple, TypeVar, Union
+    Iterator, List, Mapping, MutableMapping, NamedTuple, NoReturn, \
+    Optional, overload, Sequence, TYPE_CHECKING, Tuple, TypeVar, Union
 
 from collections import UserDict, deque, namedtuple, defaultdict
 from contextlib import contextmanager
@@ -1022,3 +1022,29 @@ class DriverConfig:
         assert driver_cls.LANGUAGE in (self.lang, None)
         assert name == driver_cls.ID
         return driver_cls(args, fpath=fpath)
+
+@dataclass
+class DriverConfigs:
+    """Per-language driver configuration."""
+    language_drivers: MutableMapping[str, str]
+    driver_args: Dict[str, List[str]]
+    drivers: Dict[str, DriverConfig] = field(init=False)
+
+    def __post_init__(self):
+        self.drivers = {lang: DriverConfig(lang, self.language_drivers, self.driver_args)
+                        for lang in ALL_LANGUAGES}
+
+    @classmethod
+    def default(cls) -> "DriverConfigs":
+        return cls(DEFAULT_DRIVERS.copy(), {d: [] for d in ALL_DRIVERS})
+
+    def copy(self) -> "DriverConfigs":
+        return type(self)(self.language_drivers.copy(),
+                          {k: list(v) for k, v in self.driver_args.items()})
+
+    def __getitem__(self, lang: str) -> DriverConfig:
+        return self.drivers[lang]
+
+    def banner(self, fpath: _Path) -> List[DriverInfo]:
+        return [dc.init_driver(fpath).version_info()
+                for dc in self.drivers.values() if dc.used]
