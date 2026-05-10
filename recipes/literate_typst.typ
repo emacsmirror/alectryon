@@ -121,8 +121,8 @@ Compute andb true false.
 
 === Skipping evaluation
 
-Use `coq` instead of `{coq}` to disable Alectryon processing for a given code block.  For example:
+Use `coq` (instead of `{coq}`) as the language name on a code block to disable all Alectryon processing for it and hide it from the prover.  For example:
 
 ```coq
-Check 1 + 1. (* Highlighted, but not executed *)
+Check 1 + nat. (* Never seen by Alectryon *)
 ```

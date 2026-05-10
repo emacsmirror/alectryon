@@ -120,6 +120,14 @@ $ alectryon literate_LaTeX.tex
     \end{\al{output}}
   \end{\al{sentence}}
 \end{alectryon}
+
+  Add \verb|{skip}| to display a syntax-highlighted Coq snippet without sending it to the prover:
+
+\begin{alectryon}
+  \begin{\al{txt}}
+    \PY{k+kn}{Check}~\PY{l+m+mi}{1}~\PY{o}{+}~\PY{n}{true}\PY{o}{.}~\PY{c}{(*~Highlighted,~but~never~seen~by~Coq!~*)}
+  \end{\al{txt}}
+\end{alectryon}
 \end{frame}
 
 \begin{frame}{Help wanted!}

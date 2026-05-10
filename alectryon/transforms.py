@@ -45,6 +45,7 @@ class IOAnnots:
         self._filters: dict[str, bool] = {}
         self.unfold: bool | None = None
         self.fails: bool | None = None
+        self.skip: bool | None = None
         self.props: list[PathAnnot] = list(props)
         for a in annots:
             self.update(a)
@@ -63,7 +64,7 @@ class IOAnnots:
     def filters(self):
         return {**self._base_filters, **self._filters}
 
-    def update(self, annot):
+    def update(self, annot, inline=False):
         r"""Apply a single annotation flag.
 
         Negative flags default to ALL; positive flags default to NONE:
@@ -87,6 +88,12 @@ class IOAnnots:
         >>> a.unfold, a.fails, a.filters['in']
         (True, True, False)
 
+        ``skip`` is block-level only:
+        >>> a = IOAnnots(); a.update('skip', inline=True)
+        Traceback (most recent call last):
+            ...
+        ValueError: `skip` is only valid as a block-level annotation.
+
         Class constants are never mutated:
         >>> _ = [IOAnnots('all', 'no-in') for _ in range(100)]
         >>> IOAnnots.FILTER_ALL['in']
@@ -102,6 +109,10 @@ class IOAnnots:
             self.unfold = False
         elif annot == 'unfold':
             self.unfold = True
+        elif annot == 'skip':
+            if inline:
+                raise ValueError("`skip` is only valid as a block-level annotation.")
+            self.skip = True
         elif annot == 'all':
             self._filters = copy(self.FILTER_ALL)
         elif annot == 'none':
@@ -152,6 +163,8 @@ class IOAnnots:
             self.unfold = other.unfold
         if self.fails is None:
             self.fails = other.fails
+        if self.skip is None:
+            self.skip = other.skip
         self.props = [*other.props, *self.props]
         if other._filters:
             self.__dict__.pop('filters', None) # Invalidate filters cache
@@ -161,14 +174,14 @@ class IOAnnots:
     def __eq__(self, other):
         return (isinstance(other, IOAnnots) and self.filters == other.filters
                 and self.unfold == other.unfold and self.fails == other.fails
-                and self.props == other.props)
+                and self.skip == other.skip and self.props == other.props)
 
     def __getitem__(self, key):
         return self.filters[key]
 
     def __repr__(self):
-        return "IOAnnots(unfold={}, fails={}, filters={}, props={})".format(
-            self.unfold, self.fails, self.filters, self.props)
+        return "IOAnnots(unfold={}, fails={}, skip={}, filters={}, props={})".format(
+            self.unfold, self.fails, self.skip, self.filters, self.props)
 
 def _enrich_goal(g):
     return RichGoal(g.name,
@@ -237,11 +250,11 @@ def _parse_path(path):
 
     return path
 
-def _update_io_annots(annots, annots_str, regex, must_match):
+def _update_io_annots(annots, annots_str, regex, must_match, inline=False):
     for mannot in regex.finditer(annots_str):
         io, path, polarity, key, val = mannot.group("io", "path", "polarity", "key", "value")
         if io:
-            annots.update(io)
+            annots.update(io, inline=inline)
         else:
             if not key:
                 key, val = "enabled", polarity != "-"
@@ -275,7 +288,8 @@ def inherit_io_annots(fragments, annots):
 
 def __read_io_comments(annots, contents, lang, must_match=True):
     for m in IO_COMMENT_RE[lang].finditer(contents):
-        _update_io_annots(annots, m.group(0), ONE_IO_ANNOT_RE, must_match=must_match)
+        _update_io_annots(annots, m.group(0), ONE_IO_ANNOT_RE,
+                          must_match=must_match, inline=True)
     return IO_COMMENT_RE[lang].sub("", contents)
 
 def _contents(obj):

@@ -105,3 +105,9 @@ The ``.. coq::`` directive supports ``:class:`` and ``:name:`` attributes.  Addi
 
 Link to `first Coq fragment <test_>`_.
 Another `link <first Coq fragment_>`__.
+
+Use the ``.. code::`` directive to display Coq code without sending it to the prover:
+
+.. code:: coq
+
+   Check 1 + nat. (* Ignored by Alectryon, never sent to Coq *)

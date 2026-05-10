@@ -88,7 +88,7 @@ from docutils.writers import html4css1, html5_polyglot, latex2e, xetex
 
 from . import core, transforms, html, latex, markers
 from .myst import Parser as MySTParser
-from .core import Gensym, Position, PosStr, Range, _Path, group_by
+from .core import Gensym, Position, PosStr, Range, _Path, group_by, ungroup_by
 from .pygments import make_highlighter, added_tokens, validate_style, \
     get_lexer, resolve_token, replace_builtin_lexers
 
@@ -412,11 +412,20 @@ class AlectryonTransform(OneTimeTransform):
                             msg, base_node=node, **opts)
 
     def annotate(self, pending_nodes, lang, cache):
-        driver = alectryon_state(self.document).config.init_driver(lang)
-        driver.observer = DocutilsObserver(self.document)
-        chunks = [pending.details["contents"] for pending in pending_nodes]
-        annotated = cache.update(chunks, driver)
-        return cache.driver_info, annotated
+        from .noop import NoOp
+        def is_skipped(p):
+            return bool(p.details["directive_annots"].skip)
+        def run(skipped, group):
+            chunks = [p.details["contents"] for p in group]
+            if skipped:
+                return NoOp().annotate(chunks)
+            driver = alectryon_state(self.document).config.init_driver(lang)
+            driver.observer = DocutilsObserver(self.document)
+            return cache.update(chunks, driver)
+        by_skipped = group_by(pending_nodes, key=is_skipped)
+        annotated = {k: run(k, v) for k, v in by_skipped.items()}
+        result = list(ungroup_by(pending_nodes, annotated, key=is_skipped))
+        return cache.driver_info, result
 
     def replace_node(self, pending, fragments, lang):
         directive_annots = pending.details["directive_annots"]

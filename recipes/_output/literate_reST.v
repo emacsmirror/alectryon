@@ -125,4 +125,10 @@ Definition test := "Hello, World!".
 (*|
 Link to `first Coq fragment <test_>`_.
 Another `link <first Coq fragment_>`__.
+
+Use the ``.. code::`` directive to display Coq code without sending it to the prover:
+
+.. code:: coq
+
+   Check 1 + nat. (\ * Ignored by Alectryon, never sent to Coq *\ )
 |*)

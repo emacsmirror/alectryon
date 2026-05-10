@@ -380,6 +380,8 @@ For HTML, wrap each snippet in ``<pre class="alectryon">``, and use the ``data-l
    Check nat.
    </pre>
 
+A special output-control flag, ``skip``, disables all processing beyond syntax highlighting for a given block.  This is useful to ensure consistent rendering between processed and unprocessed blocks.
+
 See `<recipes/literate_LaTeX.tex>`__ and `<recipes/literate_HTML.html>`__ for examples.
 
 With Typst

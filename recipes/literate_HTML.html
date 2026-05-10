@@ -14,7 +14,7 @@
       alectryon literate_HTML.html # HTML → HTML, produces ‘literate_HTML.annotated.html’
     </pre>
 
-    <p>To use Alectryon with your own HTML file, just wrap your code in <code>pre</code> tags with the <code>alectryon</code> class.  Here are some examples:</p>
+    <p>To use Alectryon with your own HTML file, just wrap your code in <code>pre</code> tags with the <code>alectryon</code> class.  Use <code>data-io</code> to set processing annotations.  Here are some examples:</p>
     <pre class="alectryon" data-lang="coq" data-io="none">
 Require Import ZArith.
     </pre>
@@ -27,6 +27,11 @@ Goal True /\ True.
     Check nat. (* .unfold *)
   - exact I.
 Qed.
+    </pre>
+
+    <p>Use <code>data-io="skip"</code> to display a snippet with syntax highlighting but without invoking the prover:</p>
+    <pre class="alectryon" data-io="skip">
+Check 1 + true. (* Never sent to Coq *)
     </pre>
   </body>
 </html>

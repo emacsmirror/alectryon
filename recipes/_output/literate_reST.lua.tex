@@ -28,6 +28,18 @@
 
 %%% Fallback definitions for Docutils-specific commands
 
+% class handling for environments (block-level elements)
+% \begin{DUclass}{spam} tries \DUCLASSspam and
+% \end{DUclass}{spam} tries \endDUCLASSspam
+\ifdefined\DUclass
+\else % poor man's "provideenvironment"
+  \newenvironment{DUclass}[1]%
+    {% "#1" does not work in end-part of environment.
+     \def\DocutilsClassFunctionName{DUCLASS#1}
+     \csname \DocutilsClassFunctionName \endcsname}%
+    {\csname end\DocutilsClassFunctionName \endcsname}%
+\fi
+
 % basic code highlight:
 \providecommand*\DUrolecomment[1]{\textcolor[rgb]{0.40,0.40,0.40}{#1}}
 \providecommand*\DUroledeleted[1]{\textcolor[rgb]{0.40,0.40,0.40}{#1}}
@@ -543,5 +555,16 @@ The \texttt{.. coq::} directive supports \texttt{:class:} and \texttt{:name:} at
 
 Link to \hyperref[test]{first Coq fragment}.
 Another \hyperref[test]{link}.
+
+Use the \texttt{.. code::} directive to display Coq code without sending it to the prover:
+
+\begin{DUclass}{code}
+\begin{DUclass}{coq}
+\begin{quote}
+\ttfamily\raggedright
+\DUrole{kn}{Check}~\DUrole{mi}{1}~\DUrole{o}{+}~\DUrole{n}{nat}\DUrole{o}{.}~\DUrole{c}{(*~Ignored~by~Alectryon,~never~sent~to~Coq~*)}
+\end{quote}
+\end{DUclass}
+\end{DUclass}
 
 \end{document}

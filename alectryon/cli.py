@@ -63,8 +63,12 @@ class CodeSnippet:
     io_annots: "Optional[IOAnnots]"
     contents: Any
 
+    @property
+    def skipped(self) -> bool:
+        return bool(self.io_annots and self.io_annots.skip)
+
     @staticmethod
-    def _polyglot_key(item: Any) -> Optional[str]:
+    def _polyglot_key(item) -> Optional[str]:
         return item.lang if isinstance(item, CodeSnippet) else None
 
     @classmethod
@@ -79,7 +83,7 @@ class CodeSnippet:
 
     @staticmethod
     def _by_lang(snippets: list["CodeSnippet"]) -> "SnippetCollection":
-        return group_by(snippets, key=CodeSnippet._polyglot_key)
+        return group_by(snippets, key=CodeSnippet._polyglot_key) # type: ignore
 
     @staticmethod
     def _update(snippets: list["CodeSnippet"], items: Iterable[Any]) -> Iterable["CodeSnippet"]:
@@ -135,9 +139,18 @@ def annotate_chunks(chunks, fpath, cache_directory, cache_compression,
                                 caches[input_language], exit_code)
 
 def _update_snippets(snippets, fpath, driver_config, cache, exit_code):
-    contents = [s.contents for s in snippets]
-    annotated = _annotate_chunks(contents, fpath, driver_config, cache, exit_code)
-    return CodeSnippet._update(snippets, annotated)
+    from .noop import NoOp
+    def key(s: CodeSnippet) -> bool:
+        return s.skipped
+    def annotate(skipped, group):
+        chunks = [s.contents for s in group]
+        if skipped:
+            return NoOp().annotate(chunks)
+        return _annotate_chunks(chunks, fpath, driver_config, cache, exit_code)
+    by_skipped: dict[bool, List[core.Fragment]] = group_by(snippets, key=key)
+    annotated = {k: annotate(k, v) for k, v in by_skipped.items()}
+    items = ungroup_by(snippets, annotated, key=key)
+    return CodeSnippet._update(snippets, items)
 
 def annotate_polyglot(snippets: list[CodeSnippet], fpath, cache_directory, cache_compression,
                       driver_configs, exit_code):

@@ -47,6 +47,12 @@ $ alectryon literate_LaTeX.tex
   \begin{alectryon}{coq}{unfold messages fails}
   Fail Check z + 0%nat.
   \end{alectryon}
+
+  Add \verb|{skip}| to display a syntax-highlighted Coq snippet without sending it to the prover:
+
+  \begin{alectryon}{coq}{skip}
+  Check 1 + true. (* Highlighted, but never seen by Coq! *)
+  \end{alectryon}
 \end{frame}
 
 \begin{frame}{Help wanted!}
