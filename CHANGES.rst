@@ -13,7 +13,9 @@ Unreleased
 
 - Generated JSON files (caches and Typst data files) are now pretty-printed only up to a bounded depth. [5382be69]
 
-- A new `--body-only` CLI flag restricts the output to the body of the generated document (no <html> nor <head> for HTML, no preamble nor \begin{document} for LaTeX), allowing outputs to be embedded in other documents. [58d697fc]
+- A new ``skip`` block-level annotation displays a code block with syntax highlighting only, without sending it to the prover.  This is most useful in LaTeX and HTML sources, since it yields consistent syntax highlighting between processed and unprocessed blocks. [85a0dd5c]
+
+- A new ``--body-only`` CLI flag restricts the output to the body of the generated document (no <html> nor <head> for HTML, no preamble nor \begin{document} for LaTeX), allowing outputs to be embedded in other documents. [58d697fc]
 
 Version 2.0.0
 =============
