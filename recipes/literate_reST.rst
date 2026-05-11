@@ -9,20 +9,22 @@
 Alectryon supports literate programs and documents (combinations of code and prose) written in Coq and reStructuredText.  Here is an example, written in reST.  It can be converted to Coq, HTML, or LaTeX using the following commands::
 
    alectryon literate_reST.rst
-       # reST+Coq → HTML;  produces ‘literate_reST.html’
-   $ DOCUTILSCONFIG=literate.docutils.conf alectryon \
-     literate_reST.rst --backend latex
-       # reST+Coq → LaTeX; produces ‘literate_reST.tex’
-   alectryon literate_reST.rst --latex-dialect lualatex -o literate_reST.lua.tex
-       # reST+Coq → LaTeX; produces ‘literate_reST.lua.tex’
+     # reST+Coq → HTML;  produces ‘literate_reST.html’
    alectryon literate_reST.rst --backend coq
-       # reST+Coq → Coq;   produces ‘literate_reST.v’
+     # reST+Coq → Coq;   produces ‘literate_reST.v’
+   $ DOCUTILSCONFIG=literate.docutils.conf alectryon \
+       literate_reST.rst --backend latex
+     # reST+Coq → LaTeX; produces ‘literate_reST.tex’
+   alectryon literate_reST.rst \
+       --latex-dialect lualatex -o literate_reST.lua.tex
+     # reST+Coq → LaTeX; produces ‘literate_reST.lua.tex’
 
    $ cd ..; python -m alectryon.literate --from rst --to coq \
        recipes/literate_reST.rst > recipes/literate_reST.min.v
      # Minimal reST → Coq; produces ‘literate_reST.min.v’
    $ cd ..; python -m alectryon.literate --from rst --to coq - \
-       < recipes/literate_reST.rst > recipes/literate_reST.min.stdin.v
+       < recipes/literate_reST.rst \
+       > recipes/literate_reST.min.stdin.v
      # Minimal reST → Coq; produces ‘literate_reST.min.stdin.v’
 
 ----

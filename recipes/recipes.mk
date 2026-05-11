@@ -164,6 +164,10 @@ recipes_targets += _output/literate_lean4.lean.rst
 _output/literate_reST.html: literate_reST.rst
 	$(alectryon) $<
 recipes_targets += _output/literate_reST.html
+# reST+Coq → Coq
+_output/literate_reST.v: literate_reST.rst
+	$(alectryon) $< --backend coq
+recipes_targets += _output/literate_reST.v
 # reST+Coq → LaTeX
 _output/literate_reST.tex: literate_reST.rst
 	DOCUTILSCONFIG=literate.docutils.conf $(alectryon) $< --backend latex
@@ -172,10 +176,6 @@ recipes_targets += _output/literate_reST.tex
 _output/literate_reST.lua.tex: literate_reST.rst
 	$(alectryon) $< --latex-dialect lualatex -o $@
 recipes_targets += _output/literate_reST.lua.tex
-# reST+Coq → Coq
-_output/literate_reST.v: literate_reST.rst
-	$(alectryon) $< --backend coq
-recipes_targets += _output/literate_reST.v
 # Minimal reST → Coq
 _output/literate_reST.min.v: literate_reST.rst | _output/
 	cd ..; $(PYTHON) -m alectryon.literate --from rst --to coq recipes/$< > recipes/$@
