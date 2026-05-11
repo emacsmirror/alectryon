@@ -102,13 +102,14 @@
   {\setlength{\lineskip}{\alectryon@@lineskip}%
    \setlength{\lineskiplimit}{\alectryon@@lineskiplimit}}
 
-% \alectryon@parbox{WIDTH}{TEXT} wraps TEXT in a box with standard line skip
-% \leavevmode: See https://tex.stackexchange.com/questions/610679/
+% \alectryon@parbox{WIDTH}{TEXT} wraps TEXT in a box with standard line skip.
+% \alectryon@raggedright: needed because \@parboxreset resets \riskip.
+% \leavevmode: See https://tex.stackexchange.com/questions/610679/.
 \newcommand*{\alectryon@parbox}[2]
   {{\alectryon@resetlineskip%
     % \setlength{\fboxsep}{0pt}%
     % \fbox{%
-      \parbox[t][][t]{#1}{\leavevmode#2}%
+      \parbox[t][][t]{#1}{\leavevmode\alectryon@raggedright#2}%
     % }%
    }}
 % \alectryon@maxwidth{WIDTH}{TEXT} typesets TEXT as a paragraph of maximum width WIDTH
