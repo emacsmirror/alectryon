@@ -49,9 +49,9 @@ class CoqLexer(RegexLexer):
     """
 
     name = 'Coq'
-    aliases = ['coq']
+    aliases = ['coq', 'rocq', 'rocq-prover']
     filenames = ['*.v']
-    mimetypes = ['text/x-coq']
+    mimetypes = ['text/x-coq', 'text/x-rocq']
 
     # This is auto-generated from Coq's Manual
     kwds = {
@@ -573,5 +573,9 @@ class TokenizedStrLexer(Lexer):
         _map = self.make_pygments_resolver(text.type_map)
         for tok in text.tokens.iter_contiguous():
             yield tok.rng.start, _map(tok), tok.value(text)
+
+def meta(Lx):
+    return ("alectryon.pygments_lexer", Lx.name,
+       tuple(Lx.aliases), tuple(Lx.filenames), tuple(Lx.mimetypes))
 
 __all__ = ["CoqLexer", "TokenizedStrLexer"]

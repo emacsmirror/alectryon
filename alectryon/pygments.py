@@ -39,7 +39,7 @@ from pygments.lexers import get_lexer_by_name # pylint: disable=no-name-in-modul
 
 from dominate.util import raw as dom_raw
 
-from .pygments_lexer import CoqLexer, TokenizedStrLexer
+from .pygments_lexer import CoqLexer, TokenizedStrLexer, meta
 from .pygments_style import AlectryonStyle
 
 def resolve_token(kind):
@@ -286,10 +286,11 @@ def replace_builtin_lexers():
     from pygments.lexers._mapping import LEXERS
 
     for nm, Lx in CUSTOM_LEXERS.items():
-        dflt = (None, Lx.name, tuple(Lx.aliases), tuple(Lx.filenames), tuple(Lx.mimetypes))
-        meta = ("alectryon.pygments_lexer", *LEXERS.get(nm, dflt)[1:])
-        LEXERS[nm] = meta
-        _lexer_cache.pop(meta[1], None)
+        to_replace = [(k, n) for k, (_, n, aliases, _, _) in LEXERS.items()
+                      if any(a in aliases for a in Lx.aliases)]
+        for key, name in to_replace or [(nm, Lx.name)]:
+            LEXERS[key] = meta(Lx)
+            _lexer_cache.pop(name, None)
 
     for dst, src in CUSTOM_LEXER_ALIASES.items():
         for key, (mod, name, aliases, fnames, mimes) in LEXERS.items():
