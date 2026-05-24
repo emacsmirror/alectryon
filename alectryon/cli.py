@@ -23,6 +23,7 @@ from __future__ import annotations
 from typing import Any, ClassVar, Dict, Iterable, Optional, Sequence, Tuple, List, Union, TYPE_CHECKING
 
 if TYPE_CHECKING:
+    from typing_extensions import Self
     from bs4 import BeautifulSoup, ResultSet, Tag
     from .typst import TypstDocument, TypstCodeSnippet
 
@@ -421,10 +422,14 @@ def dump_html_standalone(snippets, fname, webpage_style,
 class HTMLCodeSnippet(CodeSnippet):
     tag: "Tag"
 
+    @staticmethod
+    def _as_str(s: str | list[str] | None) -> str | None:
+        return "".join(s) if isinstance(s, list) else s
+
     @classmethod
-    def of_tag(cls, tag: "Tag", input_language: str) -> "HTMLCodeSnippet":
-        lang = tag.get("data-lang") or input_language
-        annots = tag.get("data-io") or ""
+    def of_tag(cls, tag: "Tag", input_language: str) -> "Self":
+        lang = cls._as_str(tag.get("data-lang")) or input_language
+        annots = cls._as_str(tag.get("data-io")) or ""
         return cls.of_text(lang, annots, tag.text, tag=tag)
 
 @dataclasses.dataclass

@@ -1097,7 +1097,7 @@ class CodeSnippet:
         return None
 
     @classmethod
-    def of_text(cls, lang: str, annots: str, text: str, **kwargs) -> "CodeSnippet":
+    def of_text(cls, lang: str, annots: str, text: str, **kwargs) -> "Self":
         from .transforms import read_all_io_flags
         if lang not in ALL_LANGUAGES:
             raise ValueError(f"Unsupported language: {lang!r}")
