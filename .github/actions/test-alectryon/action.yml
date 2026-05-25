@@ -6,6 +6,8 @@ inputs:
     required: true
   rocq_version:
     required: true
+  vsrocq_version:
+    required: true
   ocaml_version:
     required: true
   pip_cmp:
@@ -38,6 +40,7 @@ runs:
         PYTHON_VERSION=${{ inputs.python_version }}
         OCAML_VERSION=${{ inputs.ocaml_version }}
         ROCQ_VERSION=${{ inputs.rocq_version }}
+        VSROCQ_VERSION=${{ inputs.vsrocq_version }}
         PIP_CMP=${{ inputs.pip_cmp }}
       cache-from: ${{ inputs.cache_from }}
       cache-to: ${{ inputs.cache_to }}

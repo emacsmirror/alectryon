@@ -2,6 +2,7 @@ export OPAM_SWITCH ?= alectryon
 export OCAML_VERSION ?= 5.4.0
 export ROCQ_VERSION ?= 9.1.0
 export ROCQ_VERSIONS ?= $(ROCQ_VERSION)
+export VSROCQ_VERSION ?= 2.4.3
 export EASYCRYPT_VERSION ?= r2026.03
 export DAFNY_VERSION ?= 4.11.0
 export LEAN3_VERSION ?= 3.51.1
@@ -96,6 +97,7 @@ _opam:
 	deps/opam.sh $(OCAML_VERSION) \
 		--switch $(OPAM_SWITCH) \
 		--rocq-version $(ROCQ_VERSION) \
+		--vsrocq-version $(VSROCQ_VERSION) \
 		--easycrypt-version $(EASYCRYPT_VERSION)
 
 ## Docker
@@ -107,7 +109,7 @@ docker-build%: deps/Dockerfile%
 	docker build -t alectryon$* -f $< \
 		--build-arg UID=$(shell id -u) --build-arg GID=$(shell id -g) \
 		--build-arg OPAM_SWITCH --build-arg OCAML_VERSION \
-		--build-arg ROCQ_VERSION --build-arg ROCQ_VERSIONS \
+		--build-arg ROCQ_VERSION --build-arg ROCQ_VERSIONS --build-arg VSROCQ_VERSION \
 		--build-arg EASYCRYPT_VERSION \
 		--build-arg DAFNY_VERSION \
 		--build-arg LEAN3_VERSION \

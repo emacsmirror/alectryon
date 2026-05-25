@@ -4,6 +4,7 @@ FROM python:${PYTHON_VERSION}
 
 ARG OCAML_VERSION
 ARG ROCQ_VERSION
+ARG VSROCQ_VERSION
 ARG PIP_CMP
 
 ## APT
@@ -40,7 +41,8 @@ EOF
 COPY deps/opam.sh /tmp/opam.sh
 RUN <<EOF
   opam init --bare --auto-setup --disable-sandboxing
-  bash /tmp/opam.sh "$OCAML_VERSION" --switch rocq --rocq-version "$ROCQ_VERSION"
+  bash /tmp/opam.sh "$OCAML_VERSION" --switch rocq \
+    --rocq-version "$ROCQ_VERSION" --vsrocq-version "$VSROCQ_VERSION"
 EOF
 
 ENV CI=true

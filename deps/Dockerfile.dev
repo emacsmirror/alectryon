@@ -7,6 +7,7 @@ ARG GID
 ARG OPAM_SWITCH
 ARG OCAML_VERSION
 ARG ROCQ_VERSION
+ARG VSROCQ_VERSION
 ARG EASYCRYPT_VERSION
 ARG DAFNY_VERSION
 ARG LEAN3_VERSION
@@ -68,7 +69,8 @@ COPY --chown=docker:docker deps/opam.sh /tmp/opam.sh
 RUN <<EOF
   opam init --bare --auto-setup --disable-sandboxing
   bash /tmp/opam.sh "$OCAML_VERSION" --switch "$OPAM_SWITCH" \
-    --rocq-version "$ROCQ_VERSION" --easycrypt-version "$EASYCRYPT_VERSION"
+    --rocq-version "$ROCQ_VERSION" --vsrocq-version "$VSROCQ_VERSION" \
+    --easycrypt-version "$EASYCRYPT_VERSION"
 EOF
 
 ## Lean 3
