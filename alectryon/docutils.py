@@ -61,7 +61,7 @@ side, and a doctree-resolved event on the Sphinx side.
 """
 
 from types import FunctionType, MethodType
-from typing import Any, Callable, ClassVar, DefaultDict, Dict, Iterable, \
+from typing import Any, Callable, cast, ClassVar, DefaultDict, Dict, Iterable, \
     List, Mapping, Optional, Tuple, Type, TypeVar, Union
 
 import dataclasses
@@ -748,9 +748,9 @@ class AlectryonPostTransform(OneTimeTransform):
     def _apply(self, **_kwargs):
         def io_or_quote(n) -> bool:
             return isinstance(n, (alectryon_pending_io, alectryon_pending_quote))
-        all_pending = by_lang(self.document.findall(io_or_quote))
+        all_pending = cast(Iterable[nodes.pending], self.document.findall(io_or_quote))
         fmt, generator = self.init_generator() # Init once so gensym is shared
-        for lang, pending_nodes in all_pending.items():
+        for lang, pending_nodes in by_lang(all_pending).items():
             config = alectryon_state(self.document).config
             with generator.highlighter.override(lang=lang):
                 with added_tokens(config.tokens_by_lang[lang], lang):

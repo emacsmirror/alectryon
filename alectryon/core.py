@@ -41,6 +41,7 @@ import textwrap
 
 if TYPE_CHECKING:
     from typing_extensions import Self
+    from .json import BaseCacheSet
     from .pygments import Highlighter
     from .transforms import IOAnnots
 
@@ -1023,6 +1024,10 @@ class DriverConfig:
         assert name == driver_cls.ID
         return driver_cls(args, fpath=fpath)
 
+class SnippetKey(NamedTuple):
+    lang: str
+    skipped: bool
+
 @dataclass
 class DriverConfigs:
     """Per-language driver configuration."""
@@ -1031,7 +1036,7 @@ class DriverConfigs:
     observer: Observer = field(default_factory=StderrObserver)
     drivers: Dict[str, DriverConfig] = field(init=False)
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         self.drivers = {lang: DriverConfig(lang, self.language_drivers, self.driver_args)
                         for lang in ALL_LANGUAGES}
 
@@ -1051,11 +1056,13 @@ class DriverConfigs:
         driver.observer = self.observer
         return driver
 
-    def _annotate(self, chunks, lang, fpath, caches):
+    def _annotate(self, chunks: list[str], lang: str, fpath: _Path,
+                  caches: BaseCacheSet) -> List[List[Fragment]]:
         driver = self.init_driver(lang, fpath)
         return caches[lang].update(chunks, driver)
 
-    def _annotate_or_skip(self, key, group, fpath, caches):
+    def _annotate_or_skip(self, key: SnippetKey, group: List[CodeSnippet], fpath: _Path,
+                          caches: BaseCacheSet) -> Iterable[CodeSnippet]:
         chunks = CodeSnippet.unwrap(group)
         if key.skipped:
             from .noop import NoOp
@@ -1064,23 +1071,22 @@ class DriverConfigs:
             annotated = self._annotate(chunks, key.lang, fpath, caches)
         return CodeSnippet._update(group, annotated)
 
-    def annotate(self, snippets, fpath, cache_directory, cache_compression) -> List["CodeSnippet"]:
+    def annotate(self, snippets: Iterable[CodeSnippet], fpath: _Path,
+                 cache_directory: Optional[_Path], cache_compression: Optional[str]) -> List[CodeSnippet]:
         from .json import CacheSet
-        def _annotate_or_skip(key, group):
+        def _annotate_or_skip(key: SnippetKey, group: List[CodeSnippet]) -> Iterable[CodeSnippet]:
             return self._annotate_or_skip(key, group, fpath, caches)
         with CacheSet(cache_directory, fpath, cache_compression) as caches:
             return by_group(snippets, key=CodeSnippet._polyglot_key, fn=_annotate_or_skip)
         assert False # Pacify pyright
 
-    def annotate_chunks(self, chunks, lang, fpath, cache_directory, cache_compression) -> list[list[Fragment]]:
+    def annotate_chunks(self, chunks: list[str], lang: str, fpath: _Path,
+                        cache_directory: Optional[_Path],
+                        cache_compression: Optional[str]) -> List[List[Fragment]]:
         from .json import CacheSet
         with CacheSet(cache_directory, fpath, cache_compression) as caches:
             return self._annotate(chunks, lang, fpath, caches)
         assert False # Pacify pyright
-
-class SnippetCollectionKey(NamedTuple):
-    lang: str
-    skipped: bool
 
 @dataclass
 class CodeSnippet:
@@ -1093,9 +1099,9 @@ class CodeSnippet:
         return bool(self.io_annots and self.io_annots.skip)
 
     @staticmethod
-    def _polyglot_key(item) -> Optional[SnippetCollectionKey]:
+    def _polyglot_key(item) -> Optional[SnippetKey]:
         if isinstance(item, CodeSnippet):
-            return SnippetCollectionKey(item.lang, item.skipped)
+            return SnippetKey(item.lang, item.skipped)
         return None
 
     @classmethod

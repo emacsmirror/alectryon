@@ -18,10 +18,11 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-from typing import Dict, Any, Optional, Tuple, TYPE_CHECKING
+from typing import Dict, Any, List, Optional, Tuple, TYPE_CHECKING
 
 if TYPE_CHECKING:
     from typing_extensions import Self
+    from .core import Driver, Fragment
 
 import json
 import pickle
@@ -316,7 +317,7 @@ class Cache:
                      "annotated": annotated,
                      **memo_dict}
 
-    def update(self, chunks, driver):
+    def update(self, chunks: "List[str]", driver: "Driver") -> "List[List[Fragment]]":
         annotated = self.get(chunks, driver.metadata)
         if annotated is None:
             annotated = driver.annotate(chunks)
@@ -460,6 +461,7 @@ class FileCacheSet(BaseCacheSet):
         if js != self.js or self._check_recompression():
             self._force_write(js)
 
-def CacheSet(cache_root, doc_path, cache_compression) -> BaseCacheSet:
+def CacheSet(cache_root: "Optional[_Path]", doc_path: "_Path",
+             cache_compression: "Optional[str]") -> BaseCacheSet:
     cls = FileCacheSet if cache_root is not None else TrivialCacheSet
     return cls(cache_root, doc_path, cache_compression)
