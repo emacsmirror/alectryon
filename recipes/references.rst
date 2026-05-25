@@ -60,7 +60,7 @@ To allow forward- and back-references, counters are not reset from one block to 
 Defining custom counter styles
 ------------------------------
 
-Custom counter styles can be defined using the ``.. role::`` directive and the ``:counter-style:`` option:
+Use the ``.. role::`` directive and the ``:counter-style:`` option to define new counter styles:
 
 .. role:: aref(mref)
    :counter-style: lower-greek

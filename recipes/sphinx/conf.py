@@ -24,13 +24,14 @@ html_static_path = ['_static']
 html_show_sphinx = False
 
 pygments_style = "emacs"
-latex_engine = "xelatex"
+latex_engine = "lualatex"
 latex_elements = {
     'fontpkg': r'''
 \setmainfont{Linux Libertine O}
-\setsansfont{Linux Biolinum O}
+\setsansfont[AutoFakeSlant=0.2]{Linux Biolinum O}
 \setmonofont[Scale=MatchLowercase,AutoFakeSlant=0.2]{Fira Code}
 ''',
+    'preamble': r'\geometry{margin=2cm}'
 }
 
 myst_enable_extensions = ["dollarmath"]
