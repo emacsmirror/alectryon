@@ -415,6 +415,10 @@ Then, annotate code blocks within your file that you want executed and recorded 
 
 Then, run ``alectryon main.typ`` from the same directory (and re-run this command any time you change your embedded source code).  This command will read all ``{…}`` code blocks in ``main.typ``, run them through the appropriate prover, copy ``alectryon.typ`` (the Alectryon Typst library), and save prover outputs to ``main.alectryon.json`` (making it available to ``alectryon.typ``).
 
+.. note::
+
+   Typst does not ship syntax highlighting for Coq sources by default; see `<recipes/tests/exact_typst.typ>`__ for an example of how to load a custom Coq grammar with Typst.
+
 .. _io-header-comment:
 
 Controlling output
