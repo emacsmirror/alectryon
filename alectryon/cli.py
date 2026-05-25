@@ -25,6 +25,7 @@ from typing import Any, ClassVar, Dict, Iterable, Optional, Sequence, Tuple, Lis
 if TYPE_CHECKING:
     from typing_extensions import Self
     from bs4 import BeautifulSoup, ResultSet, Tag
+    from .core import _Path
     from .typst import TypstDocument, TypstCodeSnippet
 
 import argparse
@@ -329,7 +330,7 @@ def gen_html_snippets_with_coqdoc(annotated, html_classes, fname,
     return _gen_html_snippets_with_coqdoc(
         annotated, fname, html_minification, input_language, pygments_style)
 
-def copy_assets(state, assets: List[Tuple[str, Union[str, core.Asset]]],
+def copy_assets(state, assets: List[Tuple["_Path", Union[str, core.Asset]]],
                 copy_fn, output_directory, ctx=None):
     if copy_fn is None:
         return state

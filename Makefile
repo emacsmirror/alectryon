@@ -29,6 +29,9 @@ ifneq (,$(wildcard $(HOME)/.opam/$(OPAM_SWITCH)))
 make := eval $$(opam env --switch=$(OPAM_SWITCH)); $(make)
 endif
 
+typeguard:
+	+$(make) TYPEGUARD=1 test
+
 test: $(dependencies)
 	+$(make) -C recipes clean
 	+$(make) -C recipes all

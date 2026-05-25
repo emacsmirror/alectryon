@@ -73,17 +73,17 @@ class TypstBackend(Backend[Node]):
         return ["+", *xs] if xs else None
 
     @staticmethod
-    def _decorate(node: Node, ids: Iterable[Any] = (),
-                  markers: Iterable[str] = ()) -> Node:
+    def _decorate(node: Node, ids: Sequence[Any] = (),
+                  markers: Sequence[str] = ()) -> Node:
         """Wrap `node` in ``marker``/``id`` nodes.
 
         Most nodes use this decorator, except goals (which render markers
         themselves on their the separator) and sentences (next to the input).
         """
-        if markers := list(markers):
+        if markers:
             node = ["marker", node, *markers]
-        if ids := [str(i) for i in ids]:
-            node = ["id", node, *ids]
+        if sids := [str(i) for i in ids]:
+            node = ["id", node, *sids]
         return node
 
     @_decorated
