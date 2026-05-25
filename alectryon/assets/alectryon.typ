@@ -1,8 +1,8 @@
-/// Alectryon Typst support library
+// Alectryon Typst support library
 
 #let alectryon-json-version = 1
 
-/// Theme
+//// Theme
 
 #let tango-light-aluminium = rgb("#EEEEEC")
 #let tango-medium-aluminium = rgb("#D3D7CF")
@@ -25,7 +25,7 @@
 #let alectryon-hyp-indent = 0.3em / alectryon-output-scale
 #let alectryon-marker-stroke = 0.4pt
 
-/// Utilities
+//// Utilities
 
 // Typst hardcodes `size: 0.8em` on `raw` elements
 #let raw-correction = 1em / 0.8
@@ -41,6 +41,7 @@
 // kind → list of entries (indexed by call position)
 #let _marker-info = state("alectryon-marker-info", ("mrefs": (), "mquotes": ()))
 
+/// Render a single `marker`.
 #let mref-marker(marker) = {
   sym.space.nobreak + box( // https://github.com/typst/typst/issues/4629
     stroke: alectryon-marker-stroke,
@@ -50,34 +51,39 @@
   )
 }
 
+/// Render a list of `markers`.
 #let mref-markers(markers) = {
   for m in markers { mref-marker(m) }
 }
 
+/// Wrap `contents` with `ids` as Typst labels.
 #let with-ids(contents, ..ids) = {
   contents
   for id in ids.pos() [#metadata(none)#label(id)]
 }
 
+/// Wrap `contents` with `markers`.
 #let with-markers(contents, ..markers) = {
   contents
   mref-markers(markers.pos())
 }
 
+/// Wrap `contents` in a `raw` block.
 #let code(contents) = context {
   let lang = _lang.get()
   raw(contents, lang: lang)
 }
 
-// Top-aligned inline box (\parbox[t])
-// https://github.com/typst/typst/issues/493
+/// Wrap `body` in a top-aligned inline box (LaTeX's ``\parbox[t]``).
+/// See https://github.com/typst/typst/issues/493.
 #let top-box(body) = context {
   let total = measure(body).height
   let single-line = measure(code("X")).height
   box(baseline: total - single-line, body)
 }
 
-// https://github.com/typst/typst/issues/5741
+/// Wrap `body` (multiple goals or messages) in a frame.
+/// See https://github.com/typst/typst/issues/5741.
 #let outputs(body) = block(
   fill: alectryon-stroke-color,
   inset: alectryon-margin,
@@ -87,6 +93,7 @@
   body,
 )
 
+/// Wrap `body` (a single goal or message) in a frame.
 #let output(body) = block(
   fill: alectryon-fill-color,
   inset: alectryon-margin,
@@ -96,9 +103,9 @@
   body,
 )
 
-/// Rendering primitives
+//// Rendering primitives
 
-// Wrap an annotated block (one or more sentences with goals/messages)
+/// Render an annotated block (one or more sentences with goals & messages).
 #let io(body) = {
   v(alectryon-io-vsep)
   block(spacing: alectryon-io-vsep, {
@@ -112,7 +119,7 @@
   v(alectryon-io-vsep)
 }
 
-// Render a type or body preceded by its operator (`:`/`:=`)
+/// Render a type or body preceded by its operator (`:`/`:=`)
 #let _hyp-bt(op, term) = {
   if term != none {
     top-box({
@@ -122,6 +129,7 @@
   }
 }
 
+/// Render a single hypothesis with `names`, `body`, and `type`.
 #let hyp(names, body, type) = {
   h(alectryon-hyp-h, weak: true)
   top-box(
@@ -133,7 +141,8 @@
   )
 }
 
-// https://github.com/typst/typst/issues/8162
+/// Render `contents` with height 0.
+/// See https://github.com/typst/typst/issues/8162.
 #let smash(contents) = context {
   let h = measure(contents).height
   box(height: 0pt, clip: false, box(height: h, contents))
@@ -155,6 +164,7 @@
   v(alectryon-rule-skip)
 }
 
+/// Render one goal with `name`, `hyps`, `concl`, and `markers`.
 #let goal(name, hyps, concl, ..markers) = {
   output({
     if hyps != none {
@@ -165,11 +175,16 @@
   })
 }
 
+/// Render a single message.
 #let message = output
 
+/// Render a list of goals.
 #let goals = outputs
+
+/// Render a list of messages.
 #let messages = outputs
 
+/// Render one sentence with `input`, `outputs`, and `markers`.
 #let sentence(input, outputs, ..markers) = {
   input + mref-markers(markers.pos())
   if outputs != none {
@@ -182,6 +197,7 @@
   }
 }
 
+/// Concat `args`.
 #let concat(..args) = {
   args.pos().sum(default: none)
 }
@@ -194,6 +210,7 @@
   id: with-ids, marker: with-markers,
 )
 
+/// Interpret an Alectryon JSON `node` into a Typst fragment.
 #let render(node) = {
   if node == none or type(node) == str {
     node
@@ -204,19 +221,22 @@
   }
 }
 
-// Warning box for stale snippets
+/// Show `original` with a stale-snippet warning.
 #let stale-warning(original) = block(
   fill: alectryon-stale-warning-color, inset: alectryon-margin, width: 100%,
   [*Stale snippet*: re-run `alectryon`. \ #original]
 )
 
-/// Main entry point
+//// Main entry point
 
 #let first-line-re = regex("^(.*?)(?:\n|\\z)")
 #let fence-re = regex("^[{]([a-z0-9]+)[}]$")
 
-// Typst <= 0.14.2 doesn't recognize {coq}, so we look for a {...} language tag
-// at the beginning of the body if the real language tag is missing.
+/// Parse the `{…}` fence out of a raw element `it`.
+///
+/// Typst <= 0.14.2 doesn't recognize ``{coq}``, so we look for a
+/// ``{...}`` language tag at the beginning of the body if the real
+/// language tag is missing.
 #let read-lang-tag(it) = {
   let lang = it.at("lang", default: none)
   let text = it.text
@@ -233,7 +253,7 @@
   (fence.captures.at(0), text)
 }
 
-/// Marker references, quotes, and assertions
+//// Marker references, quotes, and assertions
 
 #let _is-query-mode = {
   sys.inputs.at("alectryon-mode", default: none) == "query"
@@ -267,7 +287,12 @@
   link(label(entry.id), entry.marker)
 }
 
-// Link to `path` (a value in the marker positioning mini-language)
+/// Link to `path`.
+///
+/// - path: a value in the marker placement mini-language
+/// - title: marker label to insert next to the object matching `path`
+/// - prefix: prefix prepended to `path`; useful with ```typ .with```
+/// - counter-style: counter style for the marker (e.g. ``"lower-greek"``)
 #let mref(path, title: none, prefix: none, counter-style: none) = {
   _resolve-marker("mrefs", _mref, _mref-counter,
     path, title: title, prefix: prefix, counter-style: counter-style
@@ -280,6 +305,12 @@
   if block { render(entry.rendered) } else { box(render(entry.rendered)) }
 }
 
+/// Copy the object at `path`.
+///
+/// - path: a value in the marker placement mini-language
+/// - prefix: prefix prepended to `path`; useful with ```typ .with```
+/// - language: the language to render the quoted object in
+/// - block: whether to render as a block (`true`) or inline (`false`)
 #let mquote(path, prefix: none, language: none, block: false) = {
   _resolve-marker("mquotes", _mquote.with(language: language, block: block),
     _mquote-counter,
@@ -287,12 +318,23 @@
   )
 }
 
+/// Assert that `path` resolves correctly.
+/// Useful to check that a command's output has the expected shape.
+///
+/// - path: a value in the marker placement mini-language
+/// - prefix: prefix prepended to `path`; useful with ```typ .with```
 #let massert(path, prefix: none) = {
   _resolve-marker("masserts", none, none, path, prefix: prefix)
 }
 
+/// Initialize Alectryon support and load recorded output from `json-path`.
+///
+/// Use as ```typ #show: setup.with("/<filename>.alectryon.json")```.
+///
+/// - json-path: path to the `.alectryon.json` file produced by running
+///   `alectryon --backend snippets-typst` on the current file.
 #let setup(json-path, body) = {
-  if sys.inputs.at("alectryon-mode", default: none) == "query" {
+  if _is-query-mode {
     // Skip processing when running in query mode
     return body
   }

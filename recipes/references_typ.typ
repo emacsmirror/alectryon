@@ -14,7 +14,7 @@ $ typst compile --root . references_typ.typ references_typ.pdf # Typst → PDF; 
 
 == Inserting numbered references
 
-Alectryon supports references to individual sentences and hypotheses within a code fragment.  The easiest way to reference a sentence is to use `#mref("search-term")`.  Alectryon will search for that text and automatically add a label to the first matching sentence of the proof.  For example:
+Alectryon supports references to individual sentences and hypotheses within a code fragment.  The easiest way to reference a sentence is to use ```typ #mref("search-term")```.  Alectryon will search for that text and automatically add a label to the first matching sentence of the proof.  For example:
 
 ```{coq}
 Fixpoint plus_comm (n m: nat) {struct n} : n + m = m + n.
@@ -26,7 +26,7 @@ Proof.
 
 The `Fixpoint` command (#mref("Fixpoint plus_comm")) indicates that we are beginning an inductive proof.
 
-Optionally, the label can be picked manually, using `#mref("target", title: "label")`:
+Optionally, the label can be picked manually, using ```typ #mref("target", title: "label")```:
 
 The proof starts with a case analysis, indicated by “#mref("destruct n", title: "◉")”.
 
@@ -59,7 +59,7 @@ Qed.
 
 === Defining custom counter styles
 
-Custom counter styles can be defined using the `.with()` method and the `counter-style:` option:
+Custom counter styles can be defined using the ```typ .with()``` method and the ```typ counter-style:``` option:
 
 #let aref = mref.with(counter-style: "lower-greek")
 
@@ -105,13 +105,13 @@ Extraction Nat.add. (* .unfold .msg[lang]=haskell *)
 
 == Inserting textual references
 
-Instead of inserting a link to the relevant goal fragment, you can use the `#mquote()` function to insert a copy of a goal fragment inline. This only works for an input sentence, the conclusion or name of a goal, and the type, body, or name of a hypothesis:
+Instead of inserting a link to the relevant goal fragment, you can use the ```typ #mquote()``` function to insert a copy of a goal fragment inline. This only works for an input sentence, the conclusion or name of a goal, and the type, body, or name of a hypothesis:
 
 The proof above had two cases: #mquote(".io#setup.s(destruct n).g#1.h(n = 0)") (#mref(".io#setup.s(destruct n).g#1.h(n = 0)")) and #mquote(".io#setup.s(destruct n).g#2.h(n = S)") (#mref(".io#setup.s(destruct n).g#2.h(n = S)")).
 The second goal below is named #mquote(".io#pr.s(induction 1).g#2.name").
 The last case of the proof below has two induction hypotheses: #mquote(".io#pr.s(induction 1).g#4.h#IH*1.type") and #mquote(".io#pr.s(induction 1).g#4.h#IH*2.type"). The two permutation hypotheses are #mquote(".io#pr.s(induction 1).g#4.h{Permutation l l'}.name") and #mquote(".io#pr.s(induction 1).g#4.h{Permutation l' l''}.name").
 
-For conciseness, it is possible to define an alias of `#mquote()` that uses a fixed prefix.  Notice how the second example overrides the `.g` part of the prefix, too.
+For conciseness, it is possible to define an alias of ```typ #mquote()``` that uses a fixed prefix.  Notice how the second example overrides the `.g` part of the prefix, too.
 
 #let mq-pr = mquote.with(prefix: ".io#pr.s(induction 1).g#4")
 #let mq-s = mquote.with(prefix: ".io#setup.s(destruct n)")
@@ -137,7 +137,7 @@ Proof. destruct p; reflexivity. Qed.
 
 The first sentence is #mquote(".s(Record).in").#footnote[The second sentence is #mquote(".s(Goal).in").  Later on we'll see a message: #mquote(".io#pr.s(Check).msg(nat)").]
 
-To preserve newlines, pass `block: true` instead:
+To preserve newlines, pass ```typ block: true``` instead:
 
 #mquote(".s(Goal).in", block: true)
 #mquote(".io#pr.s(Check).msg(nat)", block: true)
