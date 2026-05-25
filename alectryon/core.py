@@ -1051,30 +1051,32 @@ class DriverConfigs:
         driver.observer = self.observer
         return driver
 
+    def _annotate(self, chunks, lang, fpath, caches):
+        driver = self.init_driver(lang, fpath)
+        return caches[lang].update(chunks, driver)
+
     def _annotate_or_skip(self, key, group, fpath, caches):
         chunks = CodeSnippet.unwrap(group)
         if key.skipped:
             from .noop import NoOp
-            return NoOp().annotate(chunks)
-        driver = self.init_driver(key.lang, fpath)
-        return caches[key.lang].update(chunks, driver)
+            annotated = NoOp().annotate(chunks)
+        else:
+            annotated = self._annotate(chunks, key.lang, fpath, caches)
+        return CodeSnippet._update(group, annotated)
 
     def annotate(self, snippets, fpath, cache_directory, cache_compression) -> List["CodeSnippet"]:
         from .json import CacheSet
-        def annotate_one(key, group, caches):
-            annotated = self._annotate_or_skip(key, group, fpath, caches)
-            return CodeSnippet._update(group, annotated)
+        def _annotate_or_skip(key, group):
+            return self._annotate_or_skip(key, group, fpath, caches)
         with CacheSet(cache_directory, fpath, cache_compression) as caches:
-            grouped = group_by(snippets, key=CodeSnippet._polyglot_key)
-            annotated = {k: annotate_one(k, g, caches) for k, g in grouped.items()}
-            result = list(ungroup_by(snippets, annotated,
-                                     key=CodeSnippet._polyglot_key))
-        return result
+            return by_group(snippets, key=CodeSnippet._polyglot_key, fn=_annotate_or_skip)
+        assert False # Pacify pyright
 
-    def annotate_chunks(self, chunks, lang, fpath, cache_directory, cache_compression) -> list:
-        snippets = [CodeSnippet(lang, None, c) for c in chunks]
-        annotated = self.annotate(snippets, fpath, cache_directory, cache_compression)
-        return CodeSnippet.unwrap(annotated)
+    def annotate_chunks(self, chunks, lang, fpath, cache_directory, cache_compression) -> list[list[Fragment]]:
+        from .json import CacheSet
+        with CacheSet(cache_directory, fpath, cache_compression) as caches:
+            return self._annotate(chunks, lang, fpath, caches)
+        assert False # Pacify pyright
 
 class SnippetCollectionKey(NamedTuple):
     lang: str
@@ -1083,7 +1085,7 @@ class SnippetCollectionKey(NamedTuple):
 @dataclass
 class CodeSnippet:
     lang: str
-    io_annots: Optional["IOAnnots"]
+    io_annots: "IOAnnots"
     contents: Any
 
     @property

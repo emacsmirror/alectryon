@@ -35,7 +35,7 @@ from .core import RichFragment, Sentence, Text, Names, Enriched, \
     Goals, Messages, RichSentence, must, ALL_LANGUAGES
 
 if TYPE_CHECKING:
-    from typing_extensions import TypeGuard
+    from .core import Fragment
 
 PathAnnot = namedtuple("PathAnnot", "raw path key val must_match")
 
@@ -134,7 +134,7 @@ class IOAnnots:
     def hidden(self):
         return self.filters == self.FILTER_NONE
 
-    def inherit(self, other):
+    def inherit(self, other: "IOAnnots"):
         r"""Merge parent annotations into this one.
 
         Filters and props stack:
@@ -189,7 +189,7 @@ def _enrich_goal(g):
                     [RichHypothesis(Names(h.names), h.body and RichCode(h.body), RichCode(h.type))
                      for h in g.hypotheses])
 
-def enrich_sentences(fragments):
+def enrich_sentences(fragments: Iterable[Fragment | RichFragment]) -> Iterable[RichFragment]:
     """Change each ``Sentence`` in `fragments` into an ``RichSentence``."""
     for fr in fragments:
         if isinstance(fr, Sentence):
@@ -279,10 +279,10 @@ def read_all_io_flags(s, must_match=False):
         raise ValueError("Unrecognized directive flags: {}".format(leftover))
     return annots
 
-def inherit_io_annots(fragments, annots):
+def inherit_io_annots(fragments, annots: IOAnnots) -> Iterable[RichFragment]:
     """Apply `annots` to each fragment in `fragments`."""
     for fr in enrich_sentences(fragments):
-        if hasattr(fr, 'annots'):
+        if isinstance(fr, RichSentence):
             fr.annots.inherit(annots)
         yield fr
 
