@@ -680,6 +680,13 @@ def on_snippet_contents(*pipeline):
         return CodeSnippet._update(snippets, run_pipeline(pipeline, items, ctx))
     return _dispatch
 
+def by_lang(*pipeline):
+    def _dispatch(snippets: Iterable[CodeSnippet], ctx):
+        def _run_pipeline(lang, group):
+            return run_pipeline(pipeline, group, {**ctx, "input_language": lang})
+        return core.by_group(snippets, key=lambda s: s.lang, fn=_run_pipeline)
+    return _dispatch
+
 CODE_EXTENSIONS = {
     ext for exts in core.EXTENSIONS_BY_LANGUAGE.values() for ext in exts
 }
@@ -765,8 +772,8 @@ def _add_special_pipelines(pipelines):
         'latex':
         (read_plain, parse_latex, per_snippet(read_io_comment_header),
          annotate_snippets,
-         inherit_io_annots, on_snippet_contents(apply_transforms),
-         remove_hidden_snippets, on_snippet_contents(gen_latex_snippets),
+         inherit_io_annots, by_lang(on_snippet_contents(apply_transforms)),
+         remove_hidden_snippets, by_lang(on_snippet_contents(gen_latex_snippets)),
          recover_blocks, unparse_latex,
          copy_assets, write_file(".annotated.tex", strip=(".tex",))),
     }
@@ -774,8 +781,8 @@ def _add_special_pipelines(pipelines):
         'webpage':
         (read_plain, parse_html, per_snippet(read_io_comment_header),
          annotate_snippets,
-         inherit_io_annots, on_snippet_contents(apply_transforms),
-         remove_hidden_snippets, on_snippet_contents(gen_html_snippets),
+         inherit_io_annots, by_lang(on_snippet_contents(apply_transforms)),
+         remove_hidden_snippets, by_lang(on_snippet_contents(gen_html_snippets)),
          unparse_html, copy_assets, write_file(".annotated.html", strip=(".html",)))
     }
     pipelines['typst'] = {
@@ -785,11 +792,11 @@ def _add_special_pipelines(pipelines):
          # can ````#import "alectryon.typ"```` from the output directory.
          copy_assets, parse_typst, per_snippet(read_io_comment_header),
          annotate_snippets,
-         inherit_io_annots, on_snippet_contents(apply_transforms),
+         inherit_io_annots, by_lang(on_snippet_contents(apply_transforms)),
          # ``resolve_typst_mrefs`` runs before ``remove_hidden_snippets`` so
          # ``mquote`` can find ``.none`` blocks.
          on_snippet_contents(list), resolve_typst_mrefs,
-         remove_hidden_snippets, on_snippet_contents(gen_typst_snippets),
+         remove_hidden_snippets, by_lang(on_snippet_contents(gen_typst_snippets)),
          serialize_typst_snippets,
          dump_json(3), write_file(".alectryon.json", strip=(".typ",))),
     }
