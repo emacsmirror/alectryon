@@ -376,9 +376,18 @@ For HTML, wrap each snippet in ``<pre class="alectryon">``, and use the ``data-l
 
 .. code-block:: html
 
-   <pre class="alectryon" data-lang="coq" data-io="unfold no-goals">
-   Check nat.
-   </pre>
+     <pre class="alectryon" data-lang="coq" data-io="unfold no-goals">Check nat.
+   Print Nat.add.</pre>
+
+Use the ``data-strip`` attribute on HTML documents to trigger removal of indentation and leading and trailing newlines.  Setting ``data-strip="0"`` strips only the indentation of the parent ``<pre>`` block.  Setting ``data-strip="n"`` removes ``n`` additional spaces.  In other words, the above example is equivalent to the following:
+
+.. code-block:: html
+
+   <div data-strip="3">
+     <pre class="alectryon" data-lang="coq" data-io="unfold no-goals">
+        Check nat.
+     </pre>
+   <div>
 
 A special output-control flag, ``skip``, disables all processing beyond syntax highlighting for a given block.  This is useful to ensure consistent rendering between processed and unprocessed blocks.
 

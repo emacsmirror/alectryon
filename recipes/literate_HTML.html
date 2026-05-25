@@ -8,7 +8,7 @@
       .large { font-size: 2em; }
     </style>
   </head>
-  <body>
+  <body data-strip="2">
     <p>This file shows how to process an HTML file with Alectryon.  To compile it, use the following command:</p>
     <pre>
       alectryon literate_HTML.html # HTML → HTML, produces ‘literate_HTML.annotated.html’
@@ -16,22 +16,24 @@
 
     <p>To use Alectryon with your own HTML file, just wrap your code in <code>pre</code> tags with the <code>alectryon</code> class.  Use <code>data-io</code> to set processing annotations.  Here are some examples:</p>
     <pre class="alectryon" data-lang="coq" data-io="none">
-Require Import ZArith.
+      Require Import ZArith.
     </pre>
     <pre class="alectryon large" id="goal-true" style="background: #eee">
-Goal True /\ True.
-  split. (* .unfold *)
-  - exact I.
+      Goal True /\ True.
+        split. (* .unfold *)
+        - exact I.
     </pre>
     <pre class="alectryon">
-    Check nat. (* .unfold *)
-  - exact I.
-Qed.
+          Check nat. (* .unfold *)
+        - exact I.
+      Qed.
     </pre>
 
     <p>Use <code>data-io="skip"</code> to display a snippet with syntax highlighting but without invoking the prover:</p>
     <pre class="alectryon" data-io="skip">
-Check 1 + true. (* Never sent to Coq *)
+      Check 1 + true. (* Never sent to Coq *)
     </pre>
+
+    <p>Use <code>data-strip="<var>n</var>"</code> to strip indentation and leading/trailing newlines (<code>0</code> for the indentation of the parent <code>pre</code> tag, <code><var>n</var></code> for additional indentation).</p>
   </body>
 </html>

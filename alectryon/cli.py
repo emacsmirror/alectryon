@@ -420,17 +420,42 @@ def dump_html_standalone(snippets, fname, webpage_style,
 
 @dataclasses.dataclass
 class HTMLCodeSnippet(CodeSnippet):
+    STRIP_MARKER: ClassVar[str] = "data-strip"
     tag: "Tag"
 
     @staticmethod
-    def _as_str(s: str | list[str] | None) -> str | None:
+    def _get(t: Tag, key: str) -> str | None:
+        s = t.get(key)
         return "".join(s) if isinstance(s, list) else s
 
     @classmethod
+    def _strip(cls, text: str, pre_amt: int | None, amt: str | None) -> str:
+        r"""Strip `pre_amt` + `amt` worth of indentation from each line of from `text`.
+
+        >>> text = "\n\n     abc\n  def\n "
+        >>> HTMLCodeSnippet._strip(text, 3, "1")
+        '\n abc\ndef'
+        >>> HTMLCodeSnippet._strip(text, None, "")
+        '\n     abc\n  def'
+        >>> HTMLCodeSnippet._strip(text, None, "1")
+        '\n    abc\n def'
+        >>> HTMLCodeSnippet._strip(text, 3, None) # Unchanged if no `amt`
+        '\n\n     abc\n  def\n '
+        >>> HTMLCodeSnippet._strip("\n\n", 0, "")
+        ''
+        """
+        if amt is None:
+            return text
+        indent = (pre_amt or 0) + int(amt or "0")
+        text = re.sub("\n *$", "", re.sub("^ *\n", "", text.expandtabs()))
+        return re.sub("^ +", lambda m: m.group(0)[indent:], text, flags=re.MULTILINE)
+
+    @classmethod
     def of_tag(cls, tag: "Tag", input_language: str) -> "Self":
-        lang = cls._as_str(tag.get("data-lang")) or input_language
-        annots = cls._as_str(tag.get("data-io")) or ""
-        return cls.of_text(lang, annots, tag.text, tag=tag)
+        lang = cls._get(tag, "data-lang") or input_language
+        annots = cls._get(tag, "data-io") or ""
+        text = cls._strip(tag.text, tag.sourcepos or 0, cls._get(tag, cls.STRIP_MARKER))
+        return cls.of_text(lang, annots, text, tag=tag)
 
 @dataclasses.dataclass
 class ParsedHTMLDocument:
@@ -439,12 +464,40 @@ class ParsedHTMLDocument:
     soup: BeautifulSoup
 
     @classmethod
+    def _propagate_attr(cls, s: BeautifulSoup, attr: str):
+        """Propagate `attr` attributes to code-block elements in soup `s`.
+
+        >>> s = _parse_html('<div data-strip="8"><pre class="alectryon"></pre></div>')
+        >>> ParsedHTMLDocument._propagate_attr(s, "data-strip")
+        <div><pre class="alectryon" data-strip="8"></pre></div>
+
+        >>> s = _parse_html('<div data-strip><pre data-strip="4" class="alectryon"></pre></div>')
+        >>> ParsedHTMLDocument._propagate_attr(s, "data-strip")
+        <div><pre class="alectryon" data-strip="4"></pre></div>
+
+        >>> s = _parse_html('<div data-strip><pre class="alectryon"></pre></div>')
+        >>> ParsedHTMLDocument._propagate_attr(s, "data-strip")
+        <div><pre class="alectryon" data-strip=""></pre></div>
+
+        >>> s = _parse_html('<x d="2"><y d="5"><pre class="alectryon"></pre></y></x>')
+        >>> ParsedHTMLDocument._propagate_attr(s, "d")
+        <x><y><pre class="alectryon" d="5"></pre></y></x>
+        """
+        parent_selector = f"[{attr}]:not({cls.HTML_CODE_BLOCK_SELECTOR})"
+        child_selector = f"{cls.HTML_CODE_BLOCK_SELECTOR}:not([{attr}])"
+        for stripped in reversed(s.select(parent_selector)): # inside-out
+            amt = stripped.attrs.pop(attr)
+            for desc in stripped.select(child_selector):
+                desc[attr] = amt
+        return s
+
+    @classmethod
     def of_str(cls, html: str, input_language: str) -> Tuple["ParsedHTMLDocument", Blocks]:
-        soup: BeautifulSoup = _parse_html(html)
+        soup: BeautifulSoup = cls._propagate_attr(_parse_html(html), HTMLCodeSnippet.STRIP_MARKER)
         tags: ResultSet = soup.select(cls.HTML_CODE_BLOCK_SELECTOR)
         return cls(soup), [HTMLCodeSnippet.of_tag(t, input_language) for t in tags]
 
-    HTML_CONSUMED_ATTRS: ClassVar[set] = {"data-lang", "data-io", "class"}
+    HTML_CONSUMED_ATTRS: ClassVar[set] = {"data-strip", "data-lang", "data-io", "class"}
 
     @classmethod
     def _copy_attributes(cls, src, dst):
